@@ -51,13 +51,13 @@ export function createInAppWallet(args: {
   const walletId = ecosystem ? ecosystem.id : "inApp";
   const emitter = createWalletEmitter<"inApp">();
   let createOptions = _createOptions;
-  let account: Account | undefined = undefined;
-  let adminAccount: Account | undefined = undefined; // Admin account if smartAccountOptions were provided with connection
-  let chain: Chain | undefined = undefined;
+  let account: Account | undefined;
+  let adminAccount: Account | undefined; // Admin account if smartAccountOptions were provided with connection
+  let chain: Chain | undefined;
   let client: ThirdwebClient | undefined;
   let authToken: string | null = null;
 
-  const resolveSmartAccountOptionsFromEcosystem = async (options: {
+  const resolveSmartAccountOptionsFromEcosystem = async (options?: {
     chain?: Chain;
   }) => {
     if (ecosystem) {
@@ -78,7 +78,7 @@ export function createInAppWallet(args: {
           // default to 4337
           const { defaultChainId } = ecosystemOptions.smartAccountOptions;
           const preferredChain =
-            options.chain ??
+            options?.chain ??
             (defaultChainId ? getCachedChain(defaultChainId) : undefined);
           if (!preferredChain) {
             throw new Error(
@@ -89,8 +89,8 @@ export function createInAppWallet(args: {
             ...createOptions,
             smartAccount: {
               chain: preferredChain,
-              sponsorGas: smartAccountOptions.sponsorGas,
               factoryAddress: smartAccountOptions.accountFactoryAddress,
+              sponsorGas: smartAccountOptions.sponsorGas,
             },
           };
         }
@@ -99,19 +99,6 @@ export function createInAppWallet(args: {
   };
 
   return {
-    id: walletId,
-    getAuthToken: () => authToken,
-    subscribe: emitter.subscribe,
-    getChain() {
-      if (!chain) {
-        return undefined;
-      }
-
-      chain = getCachedChainIfExists(chain.id) || chain;
-      return chain;
-    },
-    getConfig: () => createOptions,
-    getAccount: () => account,
     autoConnect: async (options) => {
       const { autoConnectInAppWallet } = await import("./index.js");
 
@@ -121,7 +108,7 @@ export function createInAppWallet(args: {
         ecosystem,
       );
 
-      await resolveSmartAccountOptionsFromEcosystem(options);
+      await resolveSmartAccountOptionsFromEcosystem();
 
       const {
         account: connectedAccount,
@@ -141,11 +128,11 @@ export function createInAppWallet(args: {
         authToken = null;
       }
       trackConnect({
+        chainId: chain.id,
         client: options.client,
         ecosystem,
-        walletType: walletId,
         walletAddress: account.address,
-        chainId: chain.id,
+        walletType: walletId,
       });
       // return only the account
       return account;
@@ -158,7 +145,7 @@ export function createInAppWallet(args: {
         ecosystem,
       );
 
-      await resolveSmartAccountOptionsFromEcosystem(options);
+      await resolveSmartAccountOptionsFromEcosystem();
 
       const {
         account: connectedAccount,
@@ -178,11 +165,11 @@ export function createInAppWallet(args: {
         authToken = null;
       }
       trackConnect({
+        chainId: chain.id,
         client: options.client,
         ecosystem,
-        walletType: walletId,
         walletAddress: account.address,
-        chainId: chain.id,
+        walletType: walletId,
       });
       // return only the account
       return account;
@@ -206,6 +193,20 @@ export function createInAppWallet(args: {
       authToken = null;
       emitter.emit("disconnect", undefined);
     },
+    getAccount: () => account,
+    getAdminAccount: () => adminAccount,
+    getAuthToken: () => authToken,
+    getChain() {
+      if (!chain) {
+        return undefined;
+      }
+
+      chain = getCachedChainIfExists(chain.id) || chain;
+      return chain;
+    },
+    getConfig: () => createOptions,
+    id: walletId,
+    subscribe: emitter.subscribe,
     switchChain: async (newChain) => {
       if (
         (createOptions?.smartAccount ||
@@ -244,6 +245,5 @@ export function createInAppWallet(args: {
       }
       emitter.emit("chainChanged", newChain);
     },
-    getAdminAccount: () => adminAccount,
   };
 }

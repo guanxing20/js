@@ -1,40 +1,43 @@
 "use client";
 
-import { getClientThirdwebClient } from "@/constants/thirdweb-client.client";
-import { CustomConnectWallet } from "@3rdweb-sdk/react/components/connect-wallet";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { isSanctionedAddress } from "data/eth-sanctioned-addresses";
-import { useAllChainsData } from "hooks/chains/allChains";
-import { ThemeProvider, useTheme } from "next-themes";
+import { ThemeProvider } from "next-themes";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { useEffect, useMemo } from "react";
-import { Toaster } from "sonner";
-import { SyncChainStores } from "stores/chainStores";
 import {
   ThirdwebProvider,
   useActiveAccount,
   useConnectionManager,
 } from "thirdweb/react";
+import { CustomConnectWallet } from "@/components/connect-wallet";
+import { Toaster } from "@/components/ui/sonner";
+import { isSanctionedAddress } from "@/constants/eth-sanctioned-addresses";
+import { getClientThirdwebClient } from "@/constants/thirdweb-client.client";
+import { useAllChainsData } from "@/hooks/chains/allChains";
+import { SyncChainStores } from "@/stores/chainStores";
 import { TWAutoConnect } from "./components/autoconnect";
 
 const queryClient = new QueryClient();
 const thirdwebClient = getClientThirdwebClient();
 
-export function AppRouterProviders(props: { children: React.ReactNode }) {
+export function AppRouterProviders(props: {
+  children: React.ReactNode;
+  autoConnect: boolean;
+}) {
   return (
     <NuqsAdapter>
       <QueryClientProvider client={queryClient}>
         <SyncChainStores />
         <ThirdwebProvider>
           <SyncChainDefinitionsToConnectionManager />
-          <TWAutoConnect client={thirdwebClient} />
+          {props.autoConnect && <TWAutoConnect client={thirdwebClient} />}
           <ThemeProvider
             attribute="class"
+            defaultTheme="dark"
             disableTransitionOnChange
             enableSystem={false}
-            defaultTheme="dark"
           >
-            <ToasterSetup />
+            <Toaster richColors />
             <SanctionedAddressesChecker>
               {props.children}
             </SanctionedAddressesChecker>
@@ -43,11 +46,6 @@ export function AppRouterProviders(props: { children: React.ReactNode }) {
       </QueryClientProvider>
     </NuqsAdapter>
   );
-}
-
-function ToasterSetup() {
-  const { theme } = useTheme();
-  return <Toaster richColors theme={theme === "light" ? "light" : "dark"} />;
 }
 
 function SyncChainDefinitionsToConnectionManager() {
@@ -85,9 +83,9 @@ const SanctionedAddressesChecker = ({
         <div className="flex flex-col items-center gap-4">
           <p> Your wallet address is blocked </p>
           <CustomConnectWallet
-            loginRequired={false}
-            isLoggedIn={true}
             client={client}
+            isLoggedIn={true}
+            loginRequired={false}
           />
         </div>
       </div>

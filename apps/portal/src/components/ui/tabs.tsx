@@ -12,8 +12,11 @@ const TabsList = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof TabsPrimitive.List>
 >(({ className, ...props }, ref) => (
   <TabsPrimitive.List
+    className={cn(
+      "flex w-100 items-center justify-start border-b overflow-x-auto overflow-y-hidden whitespace-nowrap no-scrollbar",
+      className,
+    )}
     ref={ref}
-    className={cn("flex w-100 items-center justify-start border-b", className)}
     {...props}
   />
 ));
@@ -24,14 +27,14 @@ const TabsTrigger = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof TabsPrimitive.Trigger>
 >(({ className, ...props }, ref) => (
   <TabsPrimitive.Trigger
-    ref={ref}
     className={cn(
-      "mb-[-2px] flex items-center whitespace-nowrap px-4 py-3",
-      "border-transparent border-b-2 font-semibold text-base text-muted-foreground ring-offset-700 transition-all",
-      "data-[state=active]:border-foreground data-[state=active]:text-foreground",
+      "mb-[-2px] flex items-center whitespace-nowrap px-4 py-2 text-sm font-medium",
+      "border-transparent border-b-4 text-muted-foreground ring-offset-700 transition-all",
+      "data-[state=active]:border-violet-800 hover:text-foreground data-[state=active]:text-foreground",
       "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
       className,
     )}
+    ref={ref}
     {...props}
   />
 ));
@@ -42,11 +45,11 @@ const TabsContent = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof TabsPrimitive.Content>
 >(({ className, ...props }, ref) => (
   <TabsPrimitive.Content
-    ref={ref}
     className={cn(
       "mt-4 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
       className,
     )}
+    ref={ref}
     {...props}
   />
 ));

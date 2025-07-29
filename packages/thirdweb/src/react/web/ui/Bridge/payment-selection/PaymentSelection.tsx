@@ -1,8 +1,11 @@
 "use client";
+import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
+import { trackPayEvent } from "../../../../../analytics/track/pay.js";
 import type { Token } from "../../../../../bridge/types/Token.js";
 import { defineChain } from "../../../../../chains/utils.js";
 import type { ThirdwebClient } from "../../../../../client/client.js";
+import type { SupportedFiatCurrency } from "../../../../../pay/convert/type.js";
 import type { Address } from "../../../../../utils/address.js";
 import { toUnits } from "../../../../../utils/units.js";
 import type { Wallet } from "../../../../../wallets/interfaces/wallet.js";
@@ -12,9 +15,9 @@ import { useConnectedWallets } from "../../../../core/hooks/wallets/useConnected
 import type { PaymentMethod } from "../../../../core/machines/paymentMachine.js";
 import type { ConnectLocale } from "../../ConnectWallet/locale/types.js";
 import { WalletSwitcherConnectionScreen } from "../../ConnectWallet/screens/WalletSwitcherConnectionScreen.js";
-import type { PayEmbedConnectOptions } from "../../PayEmbed.js";
-import { Spacer } from "../../components/Spacer.js";
 import { Container, ModalHeader } from "../../components/basic.js";
+import { Spacer } from "../../components/Spacer.js";
+import type { PayEmbedConnectOptions } from "../../PayEmbed.js";
 import { FiatProviderSelection } from "./FiatProviderSelection.js";
 import { TokenSelection } from "./TokenSelection.js";
 import { WalletFiatSelection } from "./WalletFiatSelection.js";
@@ -69,6 +72,23 @@ export interface PaymentSelectionProps {
    * Whether to include the destination token in the payment methods
    */
   includeDestinationToken?: boolean;
+
+  /**
+   * Allowed payment methods
+   * @default ["crypto", "card"]
+   */
+  paymentMethods?: ("crypto" | "card")[];
+
+  /**
+   * Fee payer
+   */
+  feePayer?: "sender" | "receiver";
+
+  /**
+   * The currency to use for the payment.
+   * @default "USD"
+   */
+  currency?: SupportedFiatCurrency;
 }
 
 type Step =
@@ -88,6 +108,9 @@ export function PaymentSelection({
   connectOptions,
   connectLocale,
   includeDestinationToken,
+  paymentMethods = ["crypto", "card"],
+  feePayer,
+  currency,
 }: PaymentSelectionProps) {
   const connectedWallets = useConnectedWallets();
   const activeWallet = useActiveWallet();
@@ -96,18 +119,31 @@ export function PaymentSelection({
     type: "walletSelection",
   });
 
+  useQuery({
+    queryFn: () => {
+      trackPayEvent({
+        client,
+        event: "payment_selection",
+        toChainId: destinationToken.chainId,
+        toToken: destinationToken.address,
+      });
+      return true;
+    },
+    queryKey: ["payment_selection"],
+  });
+
   const payerWallet =
     currentStep.type === "tokenSelection"
       ? currentStep.selectedWallet
       : activeWallet;
   const {
-    data: paymentMethods,
+    data: suitableTokenPaymentMethods,
     isLoading: paymentMethodsLoading,
     error: paymentMethodsError,
   } = usePaymentMethods({
-    destinationToken,
-    destinationAmount,
     client,
+    destinationAmount,
+    destinationToken,
     includeDestinationToken:
       includeDestinationToken ||
       receiverAddress?.toLowerCase() !==
@@ -131,7 +167,7 @@ export function PaymentSelection({
   };
 
   const handleWalletSelected = (wallet: Wallet) => {
-    setCurrentStep({ type: "tokenSelection", selectedWallet: wallet });
+    setCurrentStep({ selectedWallet: wallet, type: "tokenSelection" });
   };
 
   const handleConnectWallet = async () => {
@@ -155,10 +191,10 @@ export function PaymentSelection({
     }
 
     const fiatPaymentMethod: PaymentMethod = {
-      type: "fiat",
-      payerWallet,
-      currency: "USD", // Default to USD for now
+      currency: "USD",
       onramp: provider,
+      payerWallet, // Default to USD for now
+      type: "fiat",
     };
     handlePaymentMethodSelected(fiatPaymentMethod);
   };
@@ -204,10 +240,10 @@ export function PaymentSelection({
         chains={chains}
         client={client}
         connectLocale={connectLocale}
+        hiddenWallets={[]}
         isEmbed={false}
         onBack={handleBackToWalletSelection}
         onSelect={handleWalletSelected}
-        hiddenWallets={[]}
         recommendedWallets={connectOptions?.recommendedWallets}
         showAllWallets={
           connectOptions?.showAllWallets === undefined
@@ -222,33 +258,35 @@ export function PaymentSelection({
 
   return (
     <Container flex="column" p="lg">
-      <ModalHeader title={getStepTitle()} onBack={getBackHandler()} />
+      <ModalHeader onBack={getBackHandler()} title={getStepTitle()} />
 
       <Spacer y="xl" />
 
       <Container flex="column">
         {currentStep.type === "walletSelection" && (
           <WalletFiatSelection
-            connectedWallets={connectedWallets}
             client={client}
-            onWalletSelected={handleWalletSelected}
-            onFiatSelected={handleFiatSelected}
+            connectedWallets={connectedWallets}
             onConnectWallet={handleConnectWallet}
+            onFiatSelected={handleFiatSelected}
+            onWalletSelected={handleWalletSelected}
+            paymentMethods={paymentMethods}
           />
         )}
 
         {currentStep.type === "tokenSelection" && (
           <TokenSelection
-            paymentMethods={paymentMethods}
-            paymentMethodsLoading={paymentMethodsLoading}
             client={client}
-            onPaymentMethodSelected={handlePaymentMethodSelected}
-            onBack={handleBackToWalletSelection}
-            destinationToken={destinationToken}
             destinationAmount={toUnits(
               destinationAmount,
               destinationToken.decimals,
             )}
+            destinationToken={destinationToken}
+            feePayer={feePayer}
+            onBack={handleBackToWalletSelection}
+            onPaymentMethodSelected={handlePaymentMethodSelected}
+            paymentMethods={suitableTokenPaymentMethods}
+            paymentMethodsLoading={paymentMethodsLoading}
           />
         )}
 
@@ -256,10 +294,11 @@ export function PaymentSelection({
           <FiatProviderSelection
             client={client}
             onProviderSelected={handleOnrampProviderSelected}
-            toChainId={destinationToken.chainId}
-            toTokenAddress={destinationToken.address}
             toAddress={receiverAddress || ""}
             toAmount={destinationAmount}
+            toChainId={destinationToken.chainId}
+            toTokenAddress={destinationToken.address}
+            currency={currency}
           />
         )}
       </Container>

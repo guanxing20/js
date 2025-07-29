@@ -1,16 +1,18 @@
+import { SaveIcon } from "lucide-react";
+import { useId } from "react";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner";
 import { FormFieldSetup } from "@/components/blocks/FormFieldSetup";
-import { Spinner } from "@/components/ui/Spinner/Spinner";
 import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Spinner } from "@/components/ui/Spinner/Spinner";
+import { UnderlineLink } from "@/components/ui/UnderlineLink";
 import {
   type EngineInstance,
   type SetWalletConfigInput,
   useEngineSetWalletConfig,
-} from "@3rdweb-sdk/react/hooks/useEngine";
-import Link from "next/link";
-import { useForm } from "react-hook-form";
-import { toast } from "sonner";
+} from "@/hooks/useEngine";
 
 interface CircleConfigProps {
   instance: EngineInstance;
@@ -22,88 +24,96 @@ export const CircleConfig: React.FC<CircleConfigProps> = ({
   authToken,
 }) => {
   const { mutate: setCircleConfig, isPending } = useEngineSetWalletConfig({
-    instanceUrl: instance.url,
     authToken,
+    instanceUrl: instance.url,
   });
 
   const defaultValues: SetWalletConfigInput = {
-    type: "circle" as const,
     circleApiKey: "",
+    type: "circle" as const,
   };
 
   const form = useForm<SetWalletConfigInput>({
     defaultValues,
-    values: defaultValues,
     resetOptions: {
       keepDirty: true,
       keepDirtyValues: true,
     },
+    values: defaultValues,
   });
 
   const onSubmit = (data: SetWalletConfigInput) => {
     setCircleConfig(data, {
-      onSuccess: () => {
-        toast.success("Configuration set successfully");
-      },
       onError: (error) => {
         toast.error("Failed to set configuration", {
           description: error.message,
         });
         console.error(error);
       },
+      onSuccess: () => {
+        toast.success("Configuration set successfully");
+      },
     });
   };
 
+  const circleApiKeyId = useId();
+
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-2">
-        <p className="text-muted-foreground">
-          Circle wallets require an API Key from your Circle account with
-          sufficient permissions. Created wallets are stored in your AWS
-          account. Configure your Circle API Key to use Circle wallets. Learn
-          more about{" "}
-          <Link
-            href="https://portal.thirdweb.com/engine/features/backend-wallets#circle-wallet"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-link-foreground hover:text-foreground"
-          >
-            how to get an API Key
-          </Link>
-          .
-        </p>
-      </div>
-
+    <div className="bg-card rounded-lg border mb-8">
       <Form {...form}>
-        <form
-          className="flex flex-col gap-4"
-          onSubmit={form.handleSubmit(onSubmit)}
-        >
-          <FormFieldSetup
-            label="Circle API Key"
-            errorMessage={
-              form.getFieldState("circleApiKey", form.formState).error?.message
-            }
-            htmlFor="circle-api-key"
-            isRequired
-            tooltip={null}
-          >
-            <Input
-              id="circle-api-key"
-              placeholder="TEST_API_KEY:..."
-              autoComplete="off"
-              type="password"
-              {...form.register("circleApiKey")}
-            />
-          </FormFieldSetup>
+        <form onSubmit={form.handleSubmit(onSubmit)}>
+          <div className="p-4 lg:p-6">
+            <div className="mb-4">
+              <h2 className="text-lg font-semibold mb-1">Credentials</h2>
 
-          <div className="flex items-center justify-end gap-4">
-            <Button
-              type="submit"
-              className="min-w-28 gap-2"
-              disabled={isPending}
+              <p className="text-muted-foreground text-sm">
+                Circle wallets require an API Key from your Circle account with
+                sufficient permissions. <br /> Created wallets are stored in
+                your AWS account. Configure your Circle API Key to use Circle
+                wallets. Learn more about{" "}
+                <UnderlineLink
+                  href="https://portal.thirdweb.com/engine/features/backend-wallets#circle-wallet"
+                  rel="noopener noreferrer"
+                  target="_blank"
+                >
+                  how to get an API Key
+                </UnderlineLink>
+                .
+              </p>
+            </div>
+
+            <FormFieldSetup
+              errorMessage={
+                form.getFieldState("circleApiKey", form.formState).error
+                  ?.message
+              }
+              htmlFor={circleApiKeyId}
+              isRequired
+              label="Circle API Key"
+              tooltip={null}
             >
-              {isPending && <Spinner className="size-4" />}
+              <Input
+                autoComplete="off"
+                id={circleApiKeyId}
+                placeholder="TEST_API_KEY:..."
+                type="password"
+                {...form.register("circleApiKey")}
+              />
+            </FormFieldSetup>
+          </div>
+
+          <div className="flex items-center justify-end gap-4 border-t border-dashed px-4 py-4 lg:px-6">
+            <Button
+              className="gap-2"
+              disabled={isPending || !form.formState.isDirty}
+              size="sm"
+              type="submit"
+            >
+              {isPending ? (
+                <Spinner className="size-4" />
+              ) : (
+                <SaveIcon className="size-4" />
+              )}
               Save
             </Button>
           </div>

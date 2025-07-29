@@ -1,14 +1,8 @@
 "use client";
 
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
 import { FormControl, Textarea } from "@chakra-ui/react";
-import { TransactionButton } from "components/buttons/TransactionButton";
+import { Button } from "chakra/button";
+import { FormErrorMessage, FormLabel } from "chakra/form";
 import { PlusIcon } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -16,7 +10,14 @@ import { toast } from "sonner";
 import type { ThirdwebContract } from "thirdweb";
 import * as VoteExt from "thirdweb/extensions/vote";
 import { useSendAndConfirmTransaction } from "thirdweb/react";
-import { Button, FormErrorMessage, FormLabel } from "tw-components";
+import { TransactionButton } from "@/components/tx-button";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 
 interface VoteButtonProps {
   contract: ThirdwebContract;
@@ -38,7 +39,7 @@ export const ProposalButton: React.FC<VoteButtonProps> = ({
   } = useForm<{ description: string }>();
 
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
+    <Sheet onOpenChange={setOpen} open={open}>
       <SheetTrigger asChild>
         <Button
           colorScheme="primary"
@@ -56,30 +57,30 @@ export const ProposalButton: React.FC<VoteButtonProps> = ({
           id={PROPOSAL_FORM_ID}
           onSubmit={handleSubmit((data) => {
             const tx = VoteExt.propose({
-              contract,
               calldatas: ["0x"],
-              values: [0n],
-              targets: [contract.address],
+              contract,
               description: data.description,
+              targets: [contract.address],
+              values: [0n],
             });
             toast.promise(
               sendTx.mutateAsync(tx, {
-                onSuccess: () => {
-                  setOpen(false);
-                },
                 onError: (error) => {
                   console.error(error);
                 },
+                onSuccess: () => {
+                  setOpen(false);
+                },
               }),
               {
+                error: "Failed to create proposal",
                 loading: "Creating proposal...",
                 success: "Proposal created successfully",
-                error: "Failed to create proposal",
               },
             );
           })}
         >
-          <FormControl isRequired isInvalid={!!errors.description}>
+          <FormControl isInvalid={!!errors.description} isRequired>
             <FormLabel>Description</FormLabel>
             <Textarea {...register("description")} />
             <FormErrorMessage>{errors?.description?.message}</FormErrorMessage>
@@ -88,18 +89,18 @@ export const ProposalButton: React.FC<VoteButtonProps> = ({
         <div className="mt-6 flex flex-row justify-end gap-3">
           <Button
             isDisabled={sendTx.isPending}
-            variant="outline"
             onClick={() => setOpen(false)}
+            variant="outline"
           >
             Cancel
           </Button>
           <TransactionButton
             client={contract.client}
-            isLoggedIn={isLoggedIn}
-            txChainID={contract.chain.id}
-            transactionCount={1}
-            isPending={sendTx.isPending}
             form={PROPOSAL_FORM_ID}
+            isLoggedIn={isLoggedIn}
+            isPending={sendTx.isPending}
+            transactionCount={1}
+            txChainID={contract.chain.id}
             type="submit"
           >
             Submit

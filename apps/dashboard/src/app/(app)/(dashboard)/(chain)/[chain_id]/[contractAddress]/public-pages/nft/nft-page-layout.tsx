@@ -12,29 +12,34 @@ export function NFTPublicPageLayout(props: {
     [key: string]: unknown;
   };
   children: React.ReactNode;
+  contractCreator: string | null;
 }) {
   return (
     <div className="flex grow flex-col">
       <PageHeader containerClassName="max-w-8xl" />
+      <div className="border-b">
+        <div className="container max-w-8xl">
+          <ContractHeaderUI
+            chainMetadata={props.chainMetadata}
+            clientContract={props.clientContract}
+            contractCreator={props.contractCreator}
+            image={
+              typeof props.contractMetadata.image === "string"
+                ? props.contractMetadata.image
+                : undefined
+            }
+            name={props.contractMetadata.name}
+            socialUrls={
+              typeof props.contractMetadata.social_urls === "object" &&
+              props.contractMetadata.social_urls !== null
+                ? props.contractMetadata.social_urls
+                : {}
+            }
+            symbol={props.contractMetadata.symbol}
+          />
+        </div>
+      </div>
       <div className="container flex max-w-8xl grow flex-col">
-        <ContractHeaderUI
-          chainMetadata={props.chainMetadata}
-          imageClassName="rounded-lg"
-          clientContract={props.clientContract}
-          image={
-            typeof props.contractMetadata.image === "string"
-              ? props.contractMetadata.image
-              : undefined
-          }
-          name={props.contractMetadata.name}
-          symbol={props.contractMetadata.symbol}
-          socialUrls={
-            typeof props.contractMetadata.social_urls === "object" &&
-            props.contractMetadata.social_urls !== null
-              ? props.contractMetadata.social_urls
-              : {}
-          }
-        />
         {props.children}
       </div>
     </div>

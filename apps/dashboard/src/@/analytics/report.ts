@@ -1,6 +1,7 @@
 import posthog from "posthog-js";
 
-import type { Team } from "../api/team";
+import type { Team } from "@/api/team";
+import type { ProductSKU } from "../types/billing";
 
 // ----------------------------
 // CONTRACTS
@@ -10,7 +11,7 @@ import type { Team } from "../api/team";
  * ### Why do we need to report this event?
  * - To track the number of contracts deployed
  * - To track the number of contracts deployed on each chain
- * - To track if the contract was deployed on the asset page vs on the deploy page
+ * - To track if the contract was deployed on the token page vs on the deploy page
  *
  * ### Who is responsible for this event?
  * @jnsdls
@@ -115,9 +116,7 @@ export function reportOnboardingPlanSelectionSkipped() {
  * @jnsdls
  *
  */
-export function reportOnboardingMembersInvited(properties: {
-  count: number;
-}) {
+export function reportOnboardingMembersInvited(properties: { count: number }) {
   posthog.capture("onboarding members invited", {
     count: properties.count,
   });
@@ -185,9 +184,7 @@ export function reportOnboardingCompleted() {
  * @jnsdls
  *
  */
-export function reportFaucetUsed(properties: {
-  chainId: number;
-}) {
+export function reportFaucetUsed(properties: { chainId: number }) {
   posthog.capture("faucet used", {
     chainId: properties.chainId,
   });
@@ -217,8 +214,8 @@ export function reportChainConfigurationAdded(properties: {
   posthog.capture("chain configuration added", {
     chainId: properties.chainId,
     chainName: properties.chainName,
-    rpcURLs: properties.rpcURLs,
     nativeCurrency: properties.nativeCurrency,
+    rpcURLs: properties.rpcURLs,
   });
 }
 
@@ -230,7 +227,7 @@ type AssetContractType = "DropERC20" | "DropERC1155" | "DropERC721";
 
 /**
  * ### Why do we need to report this event?
- * - To track number of successful asset purchases from the asset page
+ * - To track number of successful asset purchases from the token page
  * - To track which asset and contract types are being purchased the most
  *
  * ### Who is responsible for this event?
@@ -242,15 +239,15 @@ export function reportAssetBuySuccessful(properties: {
   assetType: "nft" | "coin";
 }) {
   posthog.capture("asset buy successful", {
+    assetType: properties.assetType,
     chainId: properties.chainId,
     contractType: properties.contractType,
-    assetType: properties.assetType,
   });
 }
 
 /**
  * ### Why do we need to report this event?
- * - To track number of failed asset purchases from the asset page
+ * - To track number of failed asset purchases from the token page
  * - To track the errors that users encounter when trying to purchase an asset
  *
  * ### Who is responsible for this event?
@@ -263,9 +260,9 @@ export function reportAssetBuyFailed(properties: {
   error: string;
 }) {
   posthog.capture("asset buy failed", {
+    assetType: properties.assetType,
     chainId: properties.chainId,
     contractType: properties.contractType,
-    assetType: properties.assetType,
     error: properties.error,
   });
 }
@@ -365,7 +362,11 @@ export function reportAssetCreationFailed(
   properties: { contractType: AssetContractType; error: string } & (
     | {
         assetType: "nft";
-        step: "deploy-contract" | "mint-nfts" | "set-claim-conditions";
+        step:
+          | "deploy-contract"
+          | "mint-nfts"
+          | "set-claim-conditions"
+          | "set-admins";
       }
     | {
         assetType: "coin";
@@ -383,4 +384,47 @@ export function reportAssetCreationFailed(
     error: properties.error,
     step: properties.step,
   });
+}
+
+type UpsellParams = {
+  content: "storage-limit";
+  campaign: "create-coin" | "create-nft";
+  sku: Exclude<ProductSKU, null>;
+};
+
+/**
+ * ### Why do we need to report this event?
+ * - To track how effective the upsells are in driving users to upgrade
+ *
+ * ### Who is responsible for this event?
+ * @MananTank
+ */
+export function reportUpsellShown(properties: UpsellParams) {
+  posthog.capture("upsell shown", properties);
+}
+
+/**
+ * ### Why do we need to report this event?
+ * - To track how effective the upsells are in driving users to upgrade
+ *
+ * ### Who is responsible for this event?
+ * @MananTank
+ */
+export function reportUpsellClicked(properties: UpsellParams) {
+  posthog.capture("upsell clicked", properties);
+}
+
+// ----------------------------
+// PAYMENTS
+// ----------------------------
+
+/**
+ * ### Why do we need to report this event?
+ * - To track conversions on payment overview page
+ *
+ * ### Who is responsible for this event?
+ * @samina
+ */
+export function reportPaymentCardClick(properties: { id: string }) {
+  posthog.capture("payment card clicked", properties);
 }

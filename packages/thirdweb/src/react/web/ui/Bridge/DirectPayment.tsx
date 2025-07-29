@@ -2,19 +2,18 @@
 import type { Token } from "../../../../bridge/types/Token.js";
 import { defineChain } from "../../../../chains/utils.js";
 import type { ThirdwebClient } from "../../../../client/client.js";
-import { type Address, shortenAddress } from "../../../../utils/address.js";
+import type { Address } from "../../../../utils/address.js";
 import { useCustomTheme } from "../../../core/design-system/CustomThemeProvider.js";
 import { useActiveAccount } from "../../../core/hooks/wallets/useActiveAccount.js";
-import { useEnsName } from "../../../core/utils/wallet.js";
 import { ConnectButton } from "../ConnectWallet/ConnectButton.js";
 import { PoweredByThirdweb } from "../ConnectWallet/PoweredByTW.js";
 import { FiatValue } from "../ConnectWallet/screens/Buy/swap/FiatValue.js";
-import type { PayEmbedConnectOptions } from "../PayEmbed.js";
-import { ChainName } from "../components/ChainName.js";
-import { Spacer } from "../components/Spacer.js";
 import { Container, Line } from "../components/basic.js";
 import { Button } from "../components/buttons.js";
+import { ChainName } from "../components/ChainName.js";
+import { Spacer } from "../components/Spacer.js";
 import { Text } from "../components/text.js";
+import type { PayEmbedConnectOptions } from "../PayEmbed.js";
 import type { UIOptions } from "./BridgeOrchestrator.js";
 import { ChainIcon } from "./common/TokenAndChain.js";
 import { WithHeader } from "./common/WithHeader.js";
@@ -39,6 +38,12 @@ export interface DirectPaymentProps {
    * Connect options for wallet connection
    */
   connectOptions?: PayEmbedConnectOptions;
+
+  /**
+   * Whether to show thirdweb branding in the widget.
+   * @default true
+   */
+  showThirdwebBranding?: boolean;
 }
 
 export function DirectPayment({
@@ -46,6 +51,7 @@ export function DirectPayment({
   client,
   onContinue,
   connectOptions,
+  showThirdwebBranding = true,
 }: DirectPaymentProps) {
   const activeAccount = useActiveAccount();
   const chain = defineChain(uiOptions.paymentInfo.token.chainId);
@@ -57,57 +63,53 @@ export function DirectPayment({
       uiOptions.paymentInfo.sellerAddress,
     );
   };
-  const ensName = useEnsName({
-    address: uiOptions.paymentInfo.sellerAddress,
-    client,
-  });
-  const sellerAddress =
-    ensName.data || shortenAddress(uiOptions.paymentInfo.sellerAddress);
 
   const buyNow = (
     <Container flex="row" gap="3xs">
-      <Text size="md" color="primaryButtonText">
+      <Text color="primaryButtonText" size="md">
         Buy Now ·
       </Text>
       <FiatValue
-        tokenAmount={uiOptions.paymentInfo.amount}
-        token={uiOptions.paymentInfo.token}
+        currency={uiOptions.currency}
         chain={chain}
         client={client}
         color="primaryButtonText"
         size="md"
+        token={uiOptions.paymentInfo.token}
+        tokenAmount={uiOptions.paymentInfo.amount}
       />
     </Container>
   );
 
   return (
     <WithHeader
-      uiOptions={uiOptions}
-      defaultTitle="Direct Payment"
       client={client}
+      defaultTitle="Direct Payment"
+      uiOptions={uiOptions}
     >
       {/* Price section */}
       <Container
-        flex="row"
         center="y"
+        flex="row"
         gap="3xs"
         style={{
           justifyContent: "space-between",
         }}
       >
         <FiatValue
-          tokenAmount={uiOptions.paymentInfo.amount}
-          token={uiOptions.paymentInfo.token}
+          currency={uiOptions.currency}
           chain={chain}
           client={client}
           color="primaryText"
           size="xl"
+          token={uiOptions.paymentInfo.token}
+          tokenAmount={uiOptions.paymentInfo.amount}
           weight={700}
         />
         <Container flex="row" gap="3xs">
           <Text
-            size="xs"
             color="secondaryText"
+            size="xs"
             style={{
               overflow: "hidden",
               textOverflow: "ellipsis",
@@ -125,43 +127,19 @@ export function DirectPayment({
 
       <Spacer y="md" />
 
-      {/* Seller section */}
       <Container
         flex="row"
         style={{
-          justifyContent: "space-between",
           alignItems: "center",
+          justifyContent: "space-between",
         }}
       >
-        <Text size="sm" color="secondaryText">
-          Sold by
-        </Text>
-        <Text
-          size="sm"
-          color="primaryText"
-          style={{
-            fontFamily: "monospace",
-          }}
-        >
-          {sellerAddress}
-        </Text>
-      </Container>
-
-      <Spacer y="xs" />
-
-      <Container
-        flex="row"
-        style={{
-          justifyContent: "space-between",
-          alignItems: "center",
-        }}
-      >
-        <Text size="sm" color="secondaryText">
+        <Text color="secondaryText" size="sm">
           Price
         </Text>
         <Text
-          size="sm"
           color="primaryText"
+          size="sm"
           style={{
             fontFamily: "monospace",
           }}
@@ -176,21 +154,21 @@ export function DirectPayment({
       <Container
         flex="row"
         style={{
-          justifyContent: "space-between",
           alignItems: "center",
+          justifyContent: "space-between",
         }}
       >
-        <Text size="sm" color="secondaryText">
+        <Text color="secondaryText" size="sm">
           Network
         </Text>
-        <Container flex="row" gap="3xs" center="y">
-          <ChainIcon chain={chain} size={"xs"} client={client} />
+        <Container center="y" flex="row" gap="3xs">
+          <ChainIcon chain={chain} client={client} size={"xs"} />
           <ChainName
             chain={chain}
             client={client}
-            size="sm"
             color="primaryText"
             short
+            size="sm"
             style={{
               fontFamily: "monospace",
             }}
@@ -207,26 +185,29 @@ export function DirectPayment({
       {/* Action button */}
       <Container flex="column">
         {activeAccount ? (
-          <Button variant="primary" fullWidth onClick={handleContinue}>
+          <Button fullWidth onClick={handleContinue} variant="primary">
             {buyNow}
           </Button>
         ) : (
           <ConnectButton
             client={client}
-            theme={theme}
             connectButton={{
               label: buyNow,
               style: {
                 width: "100%",
               },
             }}
+            theme={theme}
             {...connectOptions}
           />
         )}
 
-        <Spacer y="md" />
-
-        <PoweredByThirdweb />
+        {showThirdwebBranding ? (
+          <div>
+            <Spacer y="md" />
+            <PoweredByThirdweb />
+          </div>
+        ) : null}
         <Spacer y="lg" />
       </Container>
     </WithHeader>

@@ -1,16 +1,17 @@
-import { ChakraProviderSetup } from "@/components/ChakraProviderSetup";
-import { Separator } from "@/components/ui/separator";
-import { serverThirdwebClient } from "@/constants/thirdweb-client.server";
-import { SimpleGrid } from "@chakra-ui/react";
-import { fetchPublishedContractVersions } from "components/contract-components/fetch-contracts-with-versions";
-import { PublishedContract } from "components/contract-components/published-contract";
 import { notFound } from "next/navigation";
 import { isAddress } from "thirdweb";
 import { resolveAddress } from "thirdweb/extensions/ens";
+import {
+  getAuthTokenWalletAddress,
+  getUserThirdwebClient,
+} from "@/api/auth-token";
+import { fetchPublishedContractVersions } from "@/components/contract-components/fetch-contracts-with-versions";
+import { PublishedContract } from "@/components/contracts/published-contract";
+import { serverThirdwebClient } from "@/constants/thirdweb-client.server";
 import { getRawAccount } from "../../../../../account/settings/getAccount";
-import { getUserThirdwebClient } from "../../../../../api/lib/getAuthToken";
 import { PublishedActions } from "../../../components/contract-actions-published.client";
 import { DeployContractHeader } from "../../../components/contract-header";
+import { PublishedContractBreadcrumbs } from "../components/breadcrumbs.client";
 
 function mapThirdwebPublisher(publisher: string) {
   if (publisher === "thirdweb.eth") {
@@ -31,8 +32,9 @@ export default async function PublishedContractPage(
   props: PublishedContractDeployPageProps,
 ) {
   const params = await props.params;
+  const accountAddress = await getAuthTokenWalletAddress();
   // resolve ENS if required
-  let publisherAddress: string | undefined = undefined;
+  let publisherAddress: string | undefined;
 
   if (isAddress(params.publisher)) {
     publisherAddress = params.publisher;
@@ -75,28 +77,34 @@ export default async function PublishedContractPage(
   ]);
 
   return (
-    <>
-      <DeployContractHeader
-        {...params}
-        allVersions={publishedContractVersions}
-        activeVersion={publishedContract}
-      >
-        <PublishedActions
+    <div>
+      <div className="border-border border-b border-dashed">
+        <PublishedContractBreadcrumbs className="container max-w-5xl" />
+      </div>
+
+      <div className="border-dashed border-b">
+        <DeployContractHeader
           {...params}
-          displayName={publishedContract.displayName || publishedContract.name}
-        />
-      </DeployContractHeader>
-      <Separator />
-      {/* TODO: remove the chakra things :) */}
-      <ChakraProviderSetup>
-        <SimpleGrid columns={12} gap={{ base: 6, md: 10 }} w="full">
-          <PublishedContract
-            publishedContract={publishedContract}
-            isLoggedIn={!!account}
-            client={client}
+          activeVersion={publishedContract}
+          allVersions={publishedContractVersions}
+          className="container max-w-5xl"
+          accountAddress={accountAddress || undefined}
+        >
+          <PublishedActions
+            {...params}
+            displayName={
+              publishedContract.displayName || publishedContract.name
+            }
           />
-        </SimpleGrid>
-      </ChakraProviderSetup>
-    </>
+        </DeployContractHeader>
+      </div>
+
+      <PublishedContract
+        maxWidthClassName="container max-w-5xl"
+        client={client}
+        isLoggedIn={!!account}
+        publishedContract={publishedContract}
+      />
+    </div>
   );
 }

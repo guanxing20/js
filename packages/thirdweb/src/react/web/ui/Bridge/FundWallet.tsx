@@ -1,8 +1,10 @@
+/** biome-ignore-all lint/a11y/useSemanticElements: FIXME */
 "use client";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { Token } from "../../../../bridge/types/Token.js";
 import type { ThirdwebClient } from "../../../../client/client.js";
 import { type Address, getAddress } from "../../../../utils/address.js";
+import { numberToPlainString } from "../../../../utils/formatNumber.js";
 import { useCustomTheme } from "../../../core/design-system/CustomThemeProvider.js";
 import {
   fontSize,
@@ -12,15 +14,16 @@ import {
 } from "../../../core/design-system/index.js";
 import { useActiveAccount } from "../../../core/hooks/wallets/useActiveAccount.js";
 import { ConnectButton } from "../ConnectWallet/ConnectButton.js";
-import { PoweredByThirdweb } from "../ConnectWallet/PoweredByTW.js";
 import { OutlineWalletIcon } from "../ConnectWallet/icons/OutlineWalletIcon.js";
+import { PoweredByThirdweb } from "../ConnectWallet/PoweredByTW.js";
 import { WalletRow } from "../ConnectWallet/screens/Buy/swap/WalletRow.js";
-import type { PayEmbedConnectOptions } from "../PayEmbed.js";
-import { Spacer } from "../components/Spacer.js";
+import { formatCurrencyAmount } from "../ConnectWallet/screens/formatTokenBalance.js";
 import { Container } from "../components/basic.js";
 import { Button } from "../components/buttons.js";
 import { Input } from "../components/formElements.js";
+import { Spacer } from "../components/Spacer.js";
 import { Text } from "../components/text.js";
+import type { PayEmbedConnectOptions } from "../PayEmbed.js";
 import type { UIOptions } from "./BridgeOrchestrator.js";
 import { TokenAndChain } from "./common/TokenAndChain.js";
 import { WithHeader } from "./common/WithHeader.js";
@@ -54,6 +57,12 @@ export interface FundWalletProps {
    * Connect options for wallet connection
    */
   connectOptions?: PayEmbedConnectOptions;
+
+  /**
+   * Whether to show thirdweb branding in the widget.
+   * @default true
+   */
+  showThirdwebBranding?: boolean;
 }
 
 export function FundWallet({
@@ -63,6 +72,7 @@ export function FundWallet({
   onContinue,
   presetOptions = [5, 10, 20],
   connectOptions,
+  showThirdwebBranding = true,
 }: FundWalletProps) {
   const [amount, setAmount] = useState(uiOptions.initialAmount ?? "");
   const theme = useCustomTheme();
@@ -99,62 +109,64 @@ export function FundWallet({
 
   const isValidAmount = amount && Number(amount) > 0;
 
+  const inputRef = useRef<HTMLInputElement>(null);
+
   const focusInput = () => {
-    const input = document.querySelector("#amount-input") as HTMLInputElement;
-    input?.focus();
+    inputRef.current?.focus();
   };
 
   const handleQuickAmount = (usdAmount: number) => {
-    if (uiOptions.destinationToken.priceUsd === 0) {
+    const price =
+      uiOptions.destinationToken.prices[uiOptions.currency || "USD"] || 0;
+    if (price === 0) {
       return;
     }
     // Convert USD amount to token amount using token price
-    const tokenAmount = usdAmount / uiOptions.destinationToken.priceUsd;
+    const tokenAmount = usdAmount / price;
     // Format to reasonable decimal places (up to 6 decimals, remove trailing zeros)
-    const formattedAmount = Number.parseFloat(
-      tokenAmount.toFixed(6),
-    ).toString();
+    const formattedAmount = numberToPlainString(
+      Number.parseFloat(tokenAmount.toFixed(6)),
+    );
     setAmount(formattedAmount);
   };
 
   return (
     <WithHeader
-      uiOptions={uiOptions}
-      defaultTitle={`Buy ${uiOptions.destinationToken.symbol}`}
       client={client}
+      defaultTitle={`Buy ${uiOptions.destinationToken.symbol}`}
+      uiOptions={uiOptions}
     >
       <Container flex="column">
         {/* Token Info */}
         <Container
-          flex="row"
           center="both"
+          flex="row"
           gap="3xs"
           p="md"
           style={{
-            flexWrap: "nowrap",
+            backgroundColor: theme.colors.tertiaryBg,
             border: `1px solid ${theme.colors.borderColor}`,
             borderRadius: radius.md,
-            backgroundColor: theme.colors.tertiaryBg,
+            flexWrap: "nowrap",
           }}
         >
           <TokenAndChain
-            token={uiOptions.destinationToken}
             client={client}
             size="xl"
+            token={uiOptions.destinationToken}
           />
           {/* Amount Input */}
           <Container
-            flex="column"
-            gap="3xs"
             center="x"
             expand
+            flex="column"
+            gap="3xs"
             style={{
-              justifyContent: "flex-end",
               alignItems: "flex-end",
+              justifyContent: "flex-end",
             }}
           >
             <div
-              style={{ cursor: "text" }}
               onClick={focusInput}
               onKeyDown={(e: React.KeyboardEvent<HTMLDivElement>) => {
                 if (e.key === "Enter" || e.key === " ") {
@@ -163,11 +175,12 @@ export function FundWallet({
                 }
               }}
               role="button"
+              style={{ cursor: "text" }}
               tabIndex={0}
             >
               <Container
-                flex="row"
                 center="y"
+                flex="row"
                 gap="xs"
                 style={{
                   flexWrap: "nowrap",
@@ -175,14 +188,11 @@ export function FundWallet({
                 }}
               >
                 <Input
-                  id="amount-input"
-                  variant="transparent"
-                  pattern="^[0-9]*[.,]?[0-9]*$"
-                  inputMode="decimal"
-                  placeholder="0"
-                  type="text"
                   data-placeholder={amount === ""}
-                  value={amount || "0"}
+                  inputMode="decimal"
+                  onChange={(e) => {
+                    handleAmountChange(e.target.value);
+                  }}
                   onClick={(e) => {
                     // put cursor at the end of the input
                     if (amount === "") {
@@ -192,35 +202,42 @@ export function FundWallet({
                       );
                     }
                   }}
-                  onChange={(e) => {
-                    handleAmountChange(e.target.value);
-                  }}
+                  pattern="^[0-9]*[.,]?[0-9]*$"
+                  placeholder="0"
+                  ref={inputRef}
                   style={{
-                    fontSize: getAmountFontSize(),
-                    fontWeight: 600,
-                    textAlign: "right",
-                    padding: "0",
                     border: "none",
                     boxShadow: "none",
+                    fontSize: getAmountFontSize(),
+                    fontWeight: 600,
+                    padding: "0",
+                    textAlign: "right",
                   }}
+                  type="text"
+                  value={amount || "0"}
+                  variant="transparent"
                 />
               </Container>
             </div>
 
             {/* Fiat Value */}
             <Container
-              flex="row"
               center="both"
-              style={{ height: fontSize.lg, flexWrap: "nowrap" }}
+              flex="row"
+              style={{ flexWrap: "nowrap", height: fontSize.lg }}
             >
               <Text
-                size="md"
                 color="secondaryText"
+                size="md"
                 style={{ textWrap: "nowrap" }}
               >
-                ≈ $
-                {(Number(amount) * uiOptions.destinationToken.priceUsd).toFixed(
-                  2,
+                ≈{" "}
+                {formatCurrencyAmount(
+                  uiOptions.currency || "USD",
+                  Number(amount) *
+                    (uiOptions.destinationToken.prices[
+                      uiOptions.currency || "USD"
+                    ] || 0),
                 )}
               </Text>
             </Container>
@@ -232,8 +249,8 @@ export function FundWallet({
           <>
             <Spacer y="md" />
             <Container
-              flex="row"
               center="x"
+              flex="row"
               gap="xs"
               style={{
                 justifyContent: "space-evenly",
@@ -241,15 +258,15 @@ export function FundWallet({
             >
               {presetOptions?.map((amount) => (
                 <Button
-                  variant="outline"
-                  onClick={() => handleQuickAmount(Number(amount))}
                   key={amount}
+                  onClick={() => handleQuickAmount(Number(amount))}
                   style={{
-                    padding: `${spacing.sm} ${spacing.md}`,
-                    fontSize: fontSize.sm,
-                    flex: 1,
                     backgroundColor: theme.colors.tertiaryBg,
+                    flex: 1,
+                    fontSize: fontSize.sm,
+                    padding: `${spacing.sm} ${spacing.md}`,
                   }}
+                  variant="outline"
                 >
                   ${amount}
                 </Button>
@@ -261,15 +278,15 @@ export function FundWallet({
         <Spacer y="md" />
 
         <Container
+          center="y"
+          color="secondaryText"
           flex="row"
           gap="sm"
           px="md"
           py="sm"
-          center="y"
-          color="secondaryText"
           style={{
-            border: `1px solid ${theme.colors.borderColor}`,
             backgroundColor: theme.colors.tertiaryBg,
+            border: `1px solid ${theme.colors.borderColor}`,
             borderRadius: radius.md,
           }}
         >
@@ -284,8 +301,8 @@ export function FundWallet({
             <>
               <OutlineWalletIcon size={iconSize.md} />
               <Text
-                size="sm"
                 color="secondaryText"
+                size="sm"
                 style={{
                   flex: 1,
                 }}
@@ -302,9 +319,8 @@ export function FundWallet({
       {/* Continue Button */}
       {receiver ? (
         <Button
-          variant="primary"
-          fullWidth
           disabled={!isValidAmount}
+          fullWidth
           onClick={() => {
             if (isValidAmount) {
               onContinue(
@@ -315,26 +331,30 @@ export function FundWallet({
             }
           }}
           style={{
-            padding: `${spacing.sm} ${spacing.md}`,
             fontSize: fontSize.md,
+            padding: `${spacing.sm} ${spacing.md}`,
           }}
+          variant="primary"
         >
           Buy {amount} {uiOptions.destinationToken.symbol}
         </Button>
       ) : (
         <ConnectButton
           client={client}
-          theme={theme}
           connectButton={{
             label: `Buy ${amount} ${uiOptions.destinationToken.symbol}`,
           }}
+          theme={theme}
           {...connectOptions}
         />
       )}
 
-      <Spacer y="md" />
-
-      <PoweredByThirdweb />
+      {showThirdwebBranding ? (
+        <div>
+          <Spacer y="md" />
+          <PoweredByThirdweb />
+        </div>
+      ) : null}
       <Spacer y="lg" />
     </WithHeader>
   );

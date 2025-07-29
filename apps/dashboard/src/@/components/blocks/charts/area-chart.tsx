@@ -1,5 +1,12 @@
 "use client";
 
+import { format } from "date-fns";
+import { useMemo } from "react";
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
+import {
+  EmptyChartState,
+  LoadingChartState,
+} from "@/components/analytics/empty-chart-state";
 import {
   Card,
   CardContent,
@@ -16,19 +23,13 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart";
 import { cn } from "@/lib/utils";
-import {
-  EmptyChartState,
-  LoadingChartState,
-} from "components/analytics/empty-chart-state";
-import { format } from "date-fns";
-import { useMemo } from "react";
-import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 
 type ThirdwebAreaChartProps<TConfig extends ChartConfig> = {
   header?: {
     title: string;
     description?: string;
     titleClassName?: string;
+    headerClassName?: string;
   };
   customHeader?: React.ReactNode;
   // chart config
@@ -52,6 +53,12 @@ type ThirdwebAreaChartProps<TConfig extends ChartConfig> = {
   toolTipLabelFormatter?: (label: string, payload: unknown) => React.ReactNode;
   toolTipValueFormatter?: (value: unknown) => React.ReactNode;
   emptyChartState?: React.ReactElement;
+  margin?: {
+    top?: number;
+    right?: number;
+    bottom?: number;
+    left?: number;
+  };
 };
 
 export function ThirdwebAreaChart<TConfig extends ChartConfig>(
@@ -62,7 +69,7 @@ export function ThirdwebAreaChart<TConfig extends ChartConfig>(
   return (
     <Card className={props.className}>
       {props.header && (
-        <CardHeader>
+        <CardHeader className={props.header.headerClassName}>
           <CardTitle className={cn("mb-2", props.header.titleClassName)}>
             {props.header.title}
           </CardTitle>
@@ -77,7 +84,7 @@ export function ThirdwebAreaChart<TConfig extends ChartConfig>(
       <CardContent
         className={cn(!props.header && "pt-6", props.cardContentClassName)}
       >
-        <ChartContainer config={props.config} className={props.chartClassName}>
+        <ChartContainer className={props.chartClassName} config={props.config}>
           {props.isPending ? (
             <LoadingChartState />
           ) : props.data.length === 0 ? (
@@ -85,23 +92,31 @@ export function ThirdwebAreaChart<TConfig extends ChartConfig>(
               {props.emptyChartState}
             </EmptyChartState>
           ) : (
-            <AreaChart accessibilityLayer data={props.data}>
+            <AreaChart
+              accessibilityLayer
+              data={props.data}
+              margin={{
+                right: props.margin?.right ?? 0,
+                left: props.margin?.left ?? 0,
+                bottom: props.margin?.bottom ?? 10,
+                top: props.margin?.top ?? 0,
+              }}
+            >
               <CartesianGrid vertical={false} />
-              {props.yAxis && <YAxis tickLine={false} axisLine={false} />}
+              {props.yAxis && <YAxis axisLine={false} tickLine={false} />}
               <XAxis
-                dataKey="time"
-                tickLine={false}
                 axisLine={false}
-                tickMargin={20}
+                dataKey="time"
                 tickFormatter={(value) =>
                   format(
                     new Date(value),
                     props.xAxis?.sameDay ? "MMM dd, HH:mm" : "MMM dd",
                   )
                 }
+                tickLine={false}
+                tickMargin={20}
               />
               <ChartTooltip
-                cursor={true}
                 content={
                   <ChartTooltipContent
                     hideLabel={
@@ -111,15 +126,16 @@ export function ThirdwebAreaChart<TConfig extends ChartConfig>(
                     valueFormatter={props.toolTipValueFormatter}
                   />
                 }
+                cursor={true}
               />
               <defs>
                 {configKeys.map((key) => (
                   <linearGradient
-                    key={key}
                     id={`fill_${key}`}
+                    key={key}
                     x1="0"
-                    y1="0"
                     x2="0"
+                    y1="0"
                     y2="1"
                   >
                     <stop
@@ -138,23 +154,23 @@ export function ThirdwebAreaChart<TConfig extends ChartConfig>(
               {configKeys.map((key) =>
                 key === "maxLine" ? (
                   <Area
-                    key={key}
-                    type="monotone"
                     dataKey="maxLine"
-                    stroke="#ef4444"
-                    strokeWidth={2}
-                    strokeDasharray="5 5"
                     fill="none"
+                    key={key}
+                    stroke="#ef4444"
+                    strokeDasharray="5 5"
+                    strokeWidth={2}
+                    type="monotone"
                   />
                 ) : (
                   <Area
-                    key={key}
                     dataKey={key}
-                    type="natural"
                     fill={`url(#fill_${key})`}
                     fillOpacity={0.4}
-                    stroke={`var(--color-${key})`}
+                    key={key}
                     stackId={props.variant !== "stacked" ? undefined : "a"}
+                    stroke={`var(--color-${key})`}
+                    type="natural"
                   />
                 ),
               )}

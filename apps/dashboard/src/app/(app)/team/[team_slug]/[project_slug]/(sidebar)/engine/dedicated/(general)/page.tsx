@@ -1,7 +1,7 @@
-import { getTeamBySlug } from "@/api/team";
 import { redirect } from "next/navigation";
-import { getAuthToken } from "../../../../../../../api/lib/getAuthToken";
-import { loginRedirect } from "../../../../../../../login/loginRedirect";
+import { getAuthToken } from "@/api/auth-token";
+import { getTeamBySlug } from "@/api/team";
+import { loginRedirect } from "@/utils/redirects";
 import { getEngineInstances } from "../_utils/getEngineInstances";
 import { EngineInstancesList } from "./overview/engine-list";
 
@@ -47,9 +47,9 @@ export default async function Page(props: {
 
   return (
     <EngineInstancesList
-      team={team}
-      projectSlug={params.project_slug}
       instances={res.data || []}
+      projectSlug={params.project_slug}
+      team={team}
     />
   );
 }

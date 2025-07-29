@@ -1,73 +1,83 @@
 "use client";
 
-import { UnderlineLink } from "@/components/ui/UnderlineLink";
-import { useEngineContractSubscription } from "@3rdweb-sdk/react/hooks/useEngine";
-import { Flex, FormControl, Switch } from "@chakra-ui/react";
-import { useState } from "react";
+import { useId, useState } from "react";
 import type { ThirdwebClient } from "thirdweb";
-import { FormLabel, Heading, Text } from "tw-components";
+import { Switch } from "@/components/ui/switch";
+import { UnderlineLink } from "@/components/ui/UnderlineLink";
+import { useEngineContractSubscription } from "@/hooks/useEngine";
 import { AddContractSubscriptionButton } from "./add-contract-subscription-button";
 import { ContractSubscriptionTable } from "./contract-subscriptions-table";
-interface EngineContractSubscriptionsProps {
+
+export function EngineContractSubscriptions({
+  instanceUrl,
+  authToken,
+  client,
+}: {
   instanceUrl: string;
   authToken: string;
   client: ThirdwebClient;
-}
-
-export const EngineContractSubscriptions: React.FC<
-  EngineContractSubscriptionsProps
-> = ({ instanceUrl, authToken, client }) => {
-  const [autoUpdate, setAutoUpdate] = useState<boolean>(true);
+}) {
+  const [autoUpdate, setAutoUpdate] = useState(true);
   const contractSubscriptionsQuery = useEngineContractSubscription({
-    instanceUrl,
     authToken,
+    instanceUrl,
   });
+  const autoUpdateId = useId();
 
   return (
-    <Flex flexDir="column" gap={4}>
-      <Flex flexDir="row" gap={2} justify="space-between">
-        <Flex flexDir="column" gap={2}>
-          <Heading size="title.md">Contract Subscriptions</Heading>
-          <Text>
+    <div>
+      {/* Header */}
+      <div className="flex flex-col md:flex-row gap-4 justify-between mb-4">
+        <div>
+          <h2 className="text-2xl font-semibold mb-1 tracking-tight">
+            Contract Subscriptions
+          </h2>
+          <p className="text-muted-foreground text-sm">
             Subscribe to event logs and transaction receipts on any contract.{" "}
             <UnderlineLink
-              href="https://portal.thirdweb.com/engine/features/contract-subscriptions"
               color="primary.500"
-              target="_blank"
+              href="https://portal.thirdweb.com/engine/features/contract-subscriptions"
               rel="noopener noreferrer"
+              target="_blank"
             >
               Learn more about contract subscriptions
             </UnderlineLink>
             .
-          </Text>
-        </Flex>
-        <div className="flex flex-row">
-          <FormControl display="flex" alignItems="center">
-            <FormLabel htmlFor="auto-update" mb="0">
-              Auto-Update
-            </FormLabel>
-            <Switch
-              isChecked={autoUpdate}
-              onChange={() => setAutoUpdate((val) => !val)}
-              id="auto-update"
-            />
-          </FormControl>
+          </p>
         </div>
-      </Flex>
+
+        <div className="flex flex-row items-center">
+          <div className="flex flex-row items-center gap-3">
+            <label htmlFor={autoUpdateId} className="text-sm">
+              Auto-Update
+            </label>
+            <Switch
+              id={autoUpdateId}
+              checked={autoUpdate}
+              onCheckedChange={() => setAutoUpdate((val) => !val)}
+            />
+          </div>
+        </div>
+      </div>
+
       <ContractSubscriptionTable
-        instanceUrl={instanceUrl}
-        contractSubscriptions={contractSubscriptionsQuery.data ?? []}
-        isPending={contractSubscriptionsQuery.isPending}
-        isFetched={contractSubscriptionsQuery.isFetched}
+        authToken={authToken}
         autoUpdate={autoUpdate}
-        authToken={authToken}
         client={client}
-      />
-      <AddContractSubscriptionButton
+        contractSubscriptions={contractSubscriptionsQuery.data ?? []}
         instanceUrl={instanceUrl}
-        authToken={authToken}
-        client={client}
+        isFetched={contractSubscriptionsQuery.isFetched}
+        isPending={contractSubscriptionsQuery.isPending}
       />
-    </Flex>
+
+      {/* add */}
+      <div className="flex justify-end mt-4">
+        <AddContractSubscriptionButton
+          authToken={authToken}
+          client={client}
+          instanceUrl={instanceUrl}
+        />
+      </div>
+    </div>
   );
-};
+}

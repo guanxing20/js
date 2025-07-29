@@ -1,21 +1,19 @@
-import { getProject, getProjects } from "@/api/projects";
-import { getTeamBySlug, getTeams } from "@/api/team";
-import { Button } from "@/components/ui/button";
-import { SidebarProvider } from "@/components/ui/sidebar";
-import { getClientThirdwebClient } from "@/constants/thirdweb-client.client";
-import { AnnouncementBanner } from "components/notices/AnnouncementBanner";
-import Link from "next/link";
 import { redirect } from "next/navigation";
-import { siwaExamplePrompts } from "../../../../(dashboard)/support/definitions";
-import { CustomChatButton } from "../../../../../../components/CustomChat/CustomChatButton";
+import { isFeatureFlagEnabled } from "@/analytics/posthog-server";
+import { getAuthToken, getAuthTokenWalletAddress } from "@/api/auth-token";
+import { getProject, getProjects, type Project } from "@/api/projects";
+import { getTeamBySlug, getTeams } from "@/api/team";
+import { CustomChatButton } from "@/components/chat/CustomChatButton";
+import { AnnouncementBanner } from "@/components/misc/AnnouncementBanner";
+import { SidebarProvider } from "@/components/ui/sidebar";
+import { siwaExamplePrompts } from "@/constants/siwa-example-prompts";
+import { getClientThirdwebClient } from "@/constants/thirdweb-client.client";
 import { getValidAccount } from "../../../../account/settings/getAccount";
-import {
-  getAuthToken,
-  getAuthTokenWalletAddress,
-} from "../../../../api/lib/getAuthToken";
 import { TeamHeaderLoggedIn } from "../../../components/TeamHeader/team-header-logged-in.client";
+import { StaffModeNotice } from "../../(team)/_components/StaffModeNotice";
 import { ProjectSidebarLayout } from "./components/ProjectSidebarLayout";
 import { SaveLastUsedProject } from "./components/SaveLastUsedProject";
+import { getEngineInstances } from "./engine/dedicated/_utils/getEngineInstances";
 
 export default async function ProjectLayout(props: {
   children: React.ReactNode;
@@ -43,8 +41,8 @@ export default async function ProjectLayout(props: {
 
   const teamsAndProjects = await Promise.all(
     teams.map(async (team) => ({
-      team,
       projects: await getProjects(team.slug),
+      team,
     })),
   );
 
@@ -59,53 +57,83 @@ export default async function ProjectLayout(props: {
     teamId: team.id,
   });
 
+  const [engineLinkType, isCentralizedWebhooksFeatureFlagEnabled] =
+    await Promise.all([
+      getEngineLinkType({
+        authToken,
+        project,
+      }),
+      isFeatureFlagEnabled({
+        flagKey: "centralized-webhooks",
+        accountId: account.id,
+        email: account.email,
+      }),
+    ]);
+
+  const isStaffMode = !teams.some((t) => t.slug === team.slug);
+
   return (
     <SidebarProvider>
       <div className="flex h-dvh min-w-0 grow flex-col">
-        {!teams.some((t) => t.slug === team.slug) && (
-          <div className="bg-warning-text">
-            <div className="container flex items-center justify-between py-4">
-              <div className="flex flex-col gap-2">
-                <p className="font-bold text-white text-xl">👀 STAFF MODE 👀</p>
-                <p className="text-sm text-white">
-                  You can only view this team, not take any actions.
-                </p>
-              </div>
-              <Button variant="default" asChild>
-                <Link href="/team/~">Leave Staff Mode</Link>
-              </Button>
-            </div>
-          </div>
-        )}
+        {isStaffMode && <StaffModeNotice />}
         <div className="sticky top-0 z-10 border-border border-b bg-card">
           <AnnouncementBanner />
           <TeamHeaderLoggedIn
-            currentProject={project}
-            currentTeam={team}
-            teamsAndProjects={teamsAndProjects}
             account={account}
             accountAddress={accountAddress}
             client={client}
+            currentProject={project}
+            currentTeam={team}
+            teamsAndProjects={teamsAndProjects}
           />
         </div>
-        <ProjectSidebarLayout layoutPath={layoutPath}>
+        <ProjectSidebarLayout
+          engineLinkType={engineLinkType}
+          layoutPath={layoutPath}
+          isCentralizedWebhooksFeatureFlagEnabled={
+            isCentralizedWebhooksFeatureFlagEnabled
+          }
+        >
           {props.children}
         </ProjectSidebarLayout>
       </div>
-      <div className="fixed right-6 bottom-6 z-50">
+      <div className="fixed right-4 bottom-4 z-50">
         <CustomChatButton
-          isLoggedIn={true}
-          networks="all"
-          isFloating={true}
-          pageType="support"
-          label="Ask AI Assistant"
-          examplePrompts={siwaExamplePrompts}
-          teamId={team.id}
-          clientId={project.publishableKey}
           authToken={authToken}
+          clientId={project.publishableKey}
+          examplePrompts={siwaExamplePrompts}
+          label="Ask AI Assistant"
+          team={team}
         />
       </div>
       <SaveLastUsedProject projectId={project.id} teamId={team.id} />
     </SidebarProvider>
   );
+}
+
+async function getEngineLinkType(params: {
+  authToken: string;
+  project: Project;
+}) {
+  const projectEngineCloudService = params.project.services.find(
+    (service) => service.name === "engineCloud",
+  );
+
+  const engineCloudToken = projectEngineCloudService?.managementAccessToken;
+
+  // if we have a management access token, link to engine cloud page
+  let engineLinkType: "cloud" | "dedicated" = "cloud";
+
+  // if we don't have a engine cloud management access token, check if there are any legacy engine instances
+  if (!engineCloudToken) {
+    const engineInstances = await getEngineInstances({
+      authToken: params.authToken,
+      teamIdOrSlug: params.project.teamId,
+    });
+    // if we have any legacy engine instances, link to the legacy engine page
+    if (engineInstances.data && engineInstances.data.length > 0) {
+      engineLinkType = "dedicated";
+    }
+  }
+  return engineLinkType;
 }

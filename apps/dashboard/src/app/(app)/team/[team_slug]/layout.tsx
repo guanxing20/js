@@ -1,8 +1,8 @@
-import { getTeamBySlug, hasToCompleteTeamOnboarding } from "@/api/team";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
-import { getAuthToken } from "../../api/lib/getAuthToken";
-import { EnsureValidConnectedWalletLoginServer } from "../../components/EnsureValidConnectedWalletLogin/EnsureValidConnectedWalletLoginServer";
+import { getAuthToken } from "@/api/auth-token";
+import { getTeamBySlug, hasToCompleteTeamOnboarding } from "@/api/team";
+import { EnsureValidConnectedWalletLoginServer } from "@/components/misc/EnsureValidConnectedWalletLogin/EnsureValidConnectedWalletLoginServer";
 import { SaveLastVisitedTeamPage } from "../components/last-visited-page/SaveLastVisitedPage";
 import {
   PastDueBanner,

@@ -1,58 +1,61 @@
 "use client";
 
-import { useEngineRelayer } from "@3rdweb-sdk/react/hooks/useEngine";
 import type { ThirdwebClient } from "thirdweb";
-import { Heading, Link, Text } from "tw-components";
+import { UnderlineLink } from "@/components/ui/UnderlineLink";
+import { useEngineRelayer } from "@/hooks/useEngine";
 import { AddRelayerButton } from "./add-relayer-button";
 import { RelayersTable } from "./relayers-table";
 
-interface EngineRelayerProps {
-  instanceUrl: string;
-  authToken: string;
-  client: ThirdwebClient;
-}
-
-export const EngineRelayer: React.FC<EngineRelayerProps> = ({
+export function EngineRelayer({
   instanceUrl,
   authToken,
   client,
-}) => {
+}: {
+  instanceUrl: string;
+  authToken: string;
+  client: ThirdwebClient;
+}) {
   const relayers = useEngineRelayer({
-    instanceUrl,
     authToken,
+    instanceUrl,
   });
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-2">
-        <Heading size="title.md">Relayers</Heading>
-        <Text>
-          Use relayers to submit transactions from your backend wallets on
-          behalf of your users.{" "}
-          <Link
-            href="https://portal.thirdweb.com/engine/features/relayers"
-            color="primary.500"
-            isExternal
-          >
-            Learn more about relayers
-          </Link>
-          .
-        </Text>
-      </div>
+    <div>
+      <h2 className="text-2xl font-semibold tracking-tight mb-1">Relayers</h2>
+      <p className="text-muted-foreground text-sm">
+        Use relayers to submit transactions from your backend wallets on behalf
+        of your users.{" "}
+        <UnderlineLink
+          href="https://portal.thirdweb.com/engine/features/relayers"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Learn more about relayers
+        </UnderlineLink>
+        .
+      </p>
+
+      <div className="h-4" />
 
       <RelayersTable
+        authToken={authToken}
+        client={client}
         instanceUrl={instanceUrl}
-        relayers={relayers.data || []}
-        isPending={relayers.isPending}
         isFetched={relayers.isFetched}
-        authToken={authToken}
-        client={client}
+        isPending={relayers.isPending}
+        relayers={relayers.data || []}
       />
-      <AddRelayerButton
-        instanceUrl={instanceUrl}
-        authToken={authToken}
-        client={client}
-      />
+
+      <div className="h-4" />
+
+      <div className="flex justify-end">
+        <AddRelayerButton
+          authToken={authToken}
+          client={client}
+          instanceUrl={instanceUrl}
+        />
+      </div>
     </div>
   );
-};
+}

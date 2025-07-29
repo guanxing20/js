@@ -18,8 +18,8 @@ export async function SharedContractTokensPage(props: {
   isLoggedIn: boolean;
 }) {
   const info = await getContractPageParamsInfo({
-    contractAddress: props.contractAddress,
     chainIdOrSlug: props.chainIdOrSlug,
+    contractAddress: props.contractAddress,
     teamId: props.projectMeta?.teamId,
   });
 
@@ -32,8 +32,8 @@ export async function SharedContractTokensPage(props: {
     const shouldHide = await shouldRenderNewPublicPage(info.serverContract);
     if (shouldHide) {
       redirectToContractLandingPage({
-        contractAddress: props.contractAddress,
         chainIdOrSlug: props.chainIdOrSlug,
+        contractAddress: props.contractAddress,
         projectMeta: props.projectMeta,
       });
     }
@@ -52,13 +52,20 @@ export async function SharedContractTokensPage(props: {
     info.serverContract,
   );
 
+  if (!supportedERCs.isERC20) {
+    redirectToContractLandingPage({
+      chainIdOrSlug: props.chainIdOrSlug,
+      contractAddress: props.contractAddress,
+      projectMeta: props.projectMeta,
+    });
+  }
+
   return (
     <ContractTokensPage
       contract={info.clientContract}
-      isERC20={supportedERCs.isERC20}
-      isMintToSupported={isMintToSupported(functionSelectors)}
       isClaimToSupported={isClaimToSupported(functionSelectors)}
       isLoggedIn={props.isLoggedIn}
+      isMintToSupported={isMintToSupported(functionSelectors)}
     />
   );
 }

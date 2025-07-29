@@ -1,27 +1,28 @@
-import { Grid, Heading, SDKCard } from "@/components/Document";
-import { Button } from "@/components/ui/button";
-import { MessageCircleIcon } from "lucide-react";
+import { BotIcon, MessageCircleIcon, WebhookIcon, ZapIcon } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { UnityIcon } from "../icons";
-import { DotNetIcon } from "../icons";
-import { UnrealEngineIcon } from "../icons";
-import { ReactIcon } from "../icons";
-import { TypeScriptIcon } from "../icons";
+import { Heading } from "@/components/Document";
+import { Button } from "@/components/ui/button";
+import {
+  DotNetIcon,
+  ExternalLinkIcon,
+  ReactIcon,
+  TypeScriptIcon,
+  UnityIcon,
+  UnrealEngineIcon,
+} from "../icons";
 import { BridgeIcon } from "../icons/products/BridgeIcon";
 import { ConnectIcon } from "../icons/products/ConnectIcon";
 import { EngineIcon } from "../icons/products/EngineIcon";
 import { InsightIcon } from "../icons/products/InsightIcon";
-import { NebulaIcon } from "../icons/products/NebulaIcon";
 import { PlaygroundIcon } from "../icons/products/PlaygroundIcon";
-import { cn } from "../lib/utils";
 import DocsHeroDark from "./_images/docs-hero-dark.png";
 import DocsHeroLight from "./_images/docs-hero-light.png";
 export default function Page() {
   return (
-    <main className="container max-w-[900px] grow pb-20" data-noindex>
+    <main className="container max-w-5xl grow pb-20" data-noindex>
       <Hero />
-      <div className="grid grid-cols-1 gap-8">
+      <div className="space-y-8">
         <PlaygroundSection />
         <LearningResourcesSection />
         <ReferenceSection />
@@ -32,7 +33,7 @@ export default function Page() {
 
 function Hero() {
   return (
-    <section className="grid gap-4 py-14 lg:grid-cols-2 lg:py-0">
+    <section className="grid gap-4 py-14 lg:grid-cols-[1fr_420px] lg:py-0">
       {/* Left */}
       <div className="flex flex-col justify-center">
         <div>
@@ -42,20 +43,21 @@ function Hero() {
           <p className="mb-8 max-w-md text-lg text-muted-foreground leading-normal">
             Development framework for building onchain apps, games, and agents.
           </p>
-
-          <Link href="/chat">
-            <Button className="flex items-center gap-2">
-              <MessageCircleIcon className="size-4" />
-              Ask AI
+          <div className="flex">
+            <Button className="flex items-center gap-2" asChild>
+              <Link href="/chat">
+                <MessageCircleIcon className="size-4" />
+                Ask AI
+              </Link>
             </Button>
-          </Link>
+          </div>
         </div>
       </div>
 
       {/* right */}
       <div className="hidden justify-center lg:flex">
-        <Image src={DocsHeroDark} alt="" className="dark-only w-full" />
-        <Image src={DocsHeroLight} alt="" className="light-only w-full" />
+        <Image alt="" className="dark-only w-full" src={DocsHeroDark} />
+        <Image alt="" className="light-only w-full" src={DocsHeroLight} />
       </div>
     </section>
   );
@@ -64,152 +66,147 @@ function Hero() {
 function PlaygroundSection() {
   return (
     <section>
-      <SectionTitle id="playground" title="Live Demos" />
-      <ArticleCardIndex
-        href="https://playground.thirdweb.com"
-        title="Playground"
-        external
-        description="Try out our interactive playground to get started"
-        icon={PlaygroundIcon}
-      />
+      <SectionTitle anchorId="playground" title="Quick Starts" />
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <ArticleCardIndex
+          description="Try out our interactive playground to get started"
+          external
+          href="https://playground.thirdweb.com"
+          icon={PlaygroundIcon}
+          title="Playground"
+        />
+        <ArticleCardIndex
+          description="For agents and humans: use the thirdweb API with natural language"
+          href="/ai/mcp"
+          icon={BotIcon}
+          title="MCP"
+        />
+        <ArticleCardIndex
+          description="Inject the thirdweb API reference in your prompts"
+          href="/ai/llm-txt"
+          icon={ZapIcon}
+          title="LLMs.txt"
+        />
+      </div>
     </section>
   );
 }
 
 function ReferenceSection() {
   return (
-    <section>
-      <SectionTitle id="reference" title="API Reference" />
-      <SectionTitle
-        id="client"
-        title="Client libraries"
-        level={4}
-        className="text-muted-foreground"
-      />
-      <Grid>
-        <SDKCard
-          title="TypeScript"
-          href="/typescript/v5"
-          icon={TypeScriptIcon}
-        />
-        <SDKCard title="React" href="/react/v5" icon={ReactIcon} />
-        <SDKCard
-          title="React Native"
-          href="/react-native/v5"
-          icon={ReactIcon}
-        />
-        <SDKCard title="DotNet" href="/dotnet" icon={DotNetIcon} />
-        <SDKCard title="Unity" href="/unity" icon={UnityIcon} />
-        <SDKCard
-          title="Unreal Engine"
-          href="/unreal-engine"
-          icon={UnrealEngineIcon}
-        />
-      </Grid>
-      <SectionTitle
-        id="backend"
-        title="Backend APIs"
-        level={4}
-        className="text-muted-foreground"
-      />
-      <Grid>
-        <SDKCard
-          title="Engine"
-          href="https://thirdweb-engine.apidocumentation.com/"
-          icon={EngineIcon}
-          isExternal
-          iconClassName="text-muted-foreground"
-        />
-        <SDKCard
-          title="Insight"
-          href="https://insight.thirdweb.com/reference#tag/webhooks"
-          icon={InsightIcon}
-          isExternal
-          iconClassName="text-muted-foreground"
-        />
-        <SDKCard
-          title="Universal Bridge"
-          href="https://bridge.thirdweb.com/reference"
-          icon={BridgeIcon}
-          isExternal
-          iconClassName="text-muted-foreground"
-        />
-        <SDKCard
-          title="Wallets"
-          href="/connect/wallet/get-users" // TODO: actual openAPI docs
-          icon={ConnectIcon}
-          iconClassName="text-muted-foreground"
-        />
-        <SDKCard
-          title="Bundler"
-          href="/connect/account-abstraction/api" // TODO: actual openAPI docs
-          icon={ConnectIcon}
-          iconClassName="text-muted-foreground"
-        />
-        <SDKCard
-          title="Nebula"
-          href="/nebula/api-reference" // TODO: actual openAPI docs
-          icon={NebulaIcon}
-          iconClassName="text-muted-foreground"
-        />
-      </Grid>
-    </section>
+    <>
+      <section>
+        <SectionTitle anchorId="client" title="Client libraries" />
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <SDKCard
+            href="/references/typescript/v5"
+            icon={TypeScriptIcon}
+            title="TypeScript"
+          />
+          <SDKCard
+            href="/references/typescript/v5"
+            icon={ReactIcon}
+            title="React"
+          />
+          <SDKCard
+            href="/references/typescript/v5"
+            icon={ReactIcon}
+            title="React Native"
+          />
+          <SDKCard href="/dotnet" icon={DotNetIcon} title="DotNet" />
+          <SDKCard href="/unity" icon={UnityIcon} title="Unity" />
+          <SDKCard
+            href="/unreal-engine"
+            icon={UnrealEngineIcon}
+            title="Unreal Engine"
+          />
+        </div>
+      </section>
+
+      <section>
+        <SectionTitle anchorId="backend" title="Backend APIs" />
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <SDKCard
+            href="https://api.thirdweb.com/reference"
+            icon={ConnectIcon}
+            title="HTTP API"
+          />
+          <SDKCard
+            href="https://engine.thirdweb.com/reference"
+            icon={EngineIcon}
+            title="Engine"
+          />
+          <SDKCard
+            href="https://insight.thirdweb.com/reference"
+            icon={InsightIcon}
+            title="Insight"
+          />
+          <SDKCard
+            href="https://bridge.thirdweb.com/reference"
+            icon={BridgeIcon}
+            title="Payments"
+          />
+          <SDKCard
+            href="/bundler"
+            icon={ConnectIcon} // TODO: actual openAPI docs
+            title="Bundler"
+          />
+          <SDKCard href="/webhooks" icon={WebhookIcon} title="Webhooks" />
+        </div>
+      </section>
+    </>
   );
 }
 
 function LearningResourcesSection() {
   return (
     <section>
-      <SectionTitle id="learning" title="Learning Resources" />
-      <Grid className="md:grid-cols-1 lg:grid-cols-2">
+      <SectionTitle anchorId="learning" title="Documentation" />
+      <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-3">
         <ArticleCardIndex
-          href="/connect"
-          title="Connect"
-          description="Wallets, auth, and onchain interactions"
+          description="Create and manage crypto wallets"
+          href="/wallets"
           icon={ConnectIcon}
+          title="Wallets"
         />
         <ArticleCardIndex
-          href="/pay"
-          title="Universal Bridge"
           description="Bridge and onramp tokens on any chain"
+          href="/payments"
           icon={BridgeIcon}
+          title="Payments"
         />
         <ArticleCardIndex
-          href="/engine"
-          title="Engine"
           description="Reliable transactions and monitoring"
+          href="/transactions"
           icon={EngineIcon}
+          title="Transactions"
         />
         <ArticleCardIndex
-          href="/insight"
-          title="Insight"
+          description="Create, deploy, and manage smart contracts"
+          href="/contracts"
+          icon={EngineIcon}
+          title="Contracts"
+        />
+        <ArticleCardIndex
           description="Blockchain data queries and transformations"
+          href="/insight"
           icon={InsightIcon}
+          title="Insight"
         />
         <ArticleCardIndex
-          href="/nebula"
-          title="Nebula"
-          description="API interface for LLMs"
-          icon={NebulaIcon}
+          description="Non-custodial key management service"
+          href="/vault"
+          icon={ConnectIcon}
+          title="Vault"
         />
-      </Grid>
+      </div>
     </section>
   );
 }
 
-function SectionTitle(props: {
-  title: string;
-  id: string;
-  level?: number;
-  className?: string;
-}) {
+function SectionTitle(props: { title: string; anchorId: string }) {
   return (
-    <Heading
-      id={props.id}
-      level={props.level || 2}
-      anchorClassName="mb-4 mt-0"
-      className={cn(props.className)}
-    >
+    <Heading anchorId={props.anchorId} anchorClassName="mb-2" level={2}>
       {props.title}
     </Heading>
   );
@@ -222,24 +219,55 @@ function ArticleCardIndex(props: {
   title: string;
   description: string;
   href: string;
-  icon?: React.FC<{ className?: string }>;
+  icon: React.FC<{ className?: string }>;
   external?: boolean;
 }) {
   return (
-    <Link
-      href={props.href}
-      target={props.external ? "_blank" : undefined}
-      className="flex items-center gap-4 rounded-lg border bg-card p-4 transition-colors hover:border-active-border"
-    >
-      <div className="flex items-center gap-3">
-        {props.icon && <props.icon className="text-muted-foreground" />}
-        <div className="flex flex-col gap-0.5">
-          <h3 className="font-semibold text-foreground text-lg">
-            {props.title}
-          </h3>
-          <p className="text-muted-foreground">{props.description}</p>
+    <div className="rounded-lg border bg-card p-4 hover:border-active-border relative">
+      <div className="flex mb-3">
+        <div className="p-2 rounded-full border bg-background">
+          <props.icon className="size-5 text-muted-foreground" />
         </div>
       </div>
-    </Link>
+      <h3 className="mb-0.5 font-medium text-lg tracking-tight">
+        <Link
+          className="before:absolute before:inset-0"
+          href={props.href}
+          target={props.external ? "_blank" : undefined}
+        >
+          {props.title}
+        </Link>
+      </h3>
+      <p className="text-sm text-muted-foreground">{props.description}</p>
+    </div>
+  );
+}
+
+function SDKCard(props: {
+  title: string;
+  href: string;
+  icon: React.FC<{ className?: string }>;
+}) {
+  return (
+    <div className="relative flex items-center gap-3 rounded-lg border bg-card p-4 transition-colors hover:border-active-border text-foreground/80 hover:text-foreground">
+      <div className="p-2 rounded-full border bg-background">
+        <props.icon className="size-4 shrink-0" />
+      </div>
+      <div className="flex flex-col">
+        <h3 className="font-medium text-base text-foreground mb-0.5">
+          <Link
+            href={props.href}
+            target={props.href.includes("http") ? "_blank" : undefined}
+            className="before:absolute before:inset-0"
+          >
+            {props.title}
+          </Link>
+        </h3>
+        <p className="inline-flex items-center gap-1 text-muted-foreground text-xs">
+          View docs
+          <ExternalLinkIcon className="size-3.5 shrink-0 text-muted-foreground/50" />
+        </p>
+      </div>
+    </div>
   );
 }

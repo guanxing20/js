@@ -1,7 +1,7 @@
-import { type Team, getTeamBySlug } from "@/api/team";
 import { notFound } from "next/navigation";
-import { getAuthToken } from "../../../../api/lib/getAuthToken";
-import { TeamOnboardingLayout } from "../../../../login/onboarding/onboarding-layout";
+import { getAuthToken } from "@/api/auth-token";
+import { getTeamBySlug, type Team } from "@/api/team";
+import { TeamOnboardingLayout } from "../../../../../login/onboarding/onboarding-layout";
 import { PlanSelector } from "./_components/plan-selector";
 
 export default async function Page(props: {
@@ -28,7 +28,7 @@ export default async function Page(props: {
 
   return (
     <TeamOnboardingLayout currentStep={2}>
-      <PlanSelector team={team} getTeam={getTeam} />
+      <PlanSelector getTeam={getTeam} team={team} />
     </TeamOnboardingLayout>
   );
 }

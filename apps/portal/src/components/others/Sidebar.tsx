@@ -1,11 +1,5 @@
 "use client";
 
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { cn } from "@/lib/utils";
 import clsx from "clsx";
 import { ChevronDownIcon } from "lucide-react";
 import type { StaticImport } from "next/dist/shared/lib/get-img-props";
@@ -13,6 +7,12 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useRef, useState } from "react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
 import { Button } from "../ui/button";
 import { CustomAccordion } from "./CustomAccordion";
 
@@ -49,20 +49,16 @@ export type SidebarLink = LinkMeta | LinkGroup | { separator: true };
 type ReferenceSideBarProps = {
   links: SidebarLink[];
   onLinkClick?: () => void;
-  name: string;
   header?: React.ReactNode;
+  name: string;
 };
 
 export function DocSidebar(props: ReferenceSideBarProps) {
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col pb-10 pt-6 text-muted-foreground text-sm">
       {/* Side bar Name */}
-      {props.header || (
-        <p className="py-5 font-semibold text-foreground text-lg">
-          {props.name}
-        </p>
-      )}
-      <ul className="styled-scrollbar transform-gpu overflow-y-scroll pr-3 pb-10">
+      {props.header}
+      <ul className="styled-scrollbar transform-gpu">
         {props.links.map((link, i) => (
           // biome-ignore lint/suspicious/noArrayIndexKey: TODO - fix this
           <li key={i}>
@@ -108,14 +104,16 @@ function SidebarItem(props: { link: SidebarLink; onLinkClick?: () => void }) {
   if (link.icon) {
     return (
       <Link
+        className={clsx(
+          "overflow-hidden text-ellipsis px-3 py-1.5  transition-colors duration-300 hover:text-foreground hover:bg-violet-800/15 border border-transparent hover:border-violet-800/50 text-sm rounded-lg",
+          isActive
+            ? "font-medium text-foreground bg-violet-800/25 border border-violet-800"
+            : "",
+          "flex flex-row items-center gap-2",
+        )}
         href={link.href}
         onClick={props.onLinkClick}
         target={link.href.startsWith("http") ? "_blank" : undefined}
-        className={clsx(
-          "overflow-hidden text-ellipsis py-1.5 font-medium text-base transition-colors duration-300 hover:text-foreground",
-          isActive ? "font-medium text-foreground" : "text-muted-foreground",
-          "flex flex-row items-center gap-2",
-        )}
       >
         {(link.icon as React.ReactElement) ? (
           <SidebarIcon icon={link.icon} />
@@ -127,13 +125,15 @@ function SidebarItem(props: { link: SidebarLink; onLinkClick?: () => void }) {
 
   return (
     <Link
-      href={link.href}
-      target={link.href.startsWith("http") ? "_blank" : undefined}
-      onClick={props.onLinkClick}
       className={clsx(
-        "block overflow-hidden text-ellipsis py-1.5 font-medium text-base transition-colors duration-300 hover:text-foreground",
-        isActive ? "font-medium text-foreground" : "text-muted-foreground",
+        "block overflow-hidden text-ellipsis px-3 py-1.5  transition-colors duration-300 hover:text-foreground hover:bg-violet-800/15 border border-transparent hover:border-violet-800/50 text-sm rounded-lg",
+        isActive
+          ? "font-medium text-foreground bg-violet-800/25 border border-violet-800"
+          : "",
       )}
+      href={link.href}
+      onClick={props.onLinkClick}
+      target={link.href.startsWith("http") ? "_blank" : undefined}
     >
       {link.name}
     </Link>
@@ -150,20 +150,20 @@ function DocSidebarNonCollapsible(props: {
 
   return (
     <div className="my-4">
-      <div className="mb-2 flex items-center gap-2">
+      <div className="mb-2 flex items-center gap-2 rounded-lg text-foreground">
         {icon && <SidebarIcon icon={icon} />}
         {href ? (
           <Link
             className={cn(
-              "block font-semibold text-base text-foreground hover:text-foreground",
-              isCategoryActive && "!text-foreground",
+              "block px-3 py-1.5 hover:bg-violet-800/20 w-full rounded-lg hover:border-violet-800/50 border border-transparent",
+              isCategoryActive && "text-foreground",
             )}
             href={href}
           >
             {name}
           </Link>
         ) : (
-          <div className="font-semibold text-base">{name}</div>
+          <div className="px-3">{name}</div>
         )}
       </div>
       <ul className="flex flex-col">
@@ -190,9 +190,9 @@ function DocSidebarCategory(props: {
 
   const hasActiveHref = containsActiveHref(
     {
-      name: name,
-      links: links,
       href: href,
+      links: links,
+      name: name,
     },
     pathname,
   );
@@ -203,11 +203,11 @@ function DocSidebarCategory(props: {
   const triggerElContent = (
     <div
       className={cn(
-        isCategoryActive && "!font-semibold !text-foreground",
+        isCategoryActive && "text-foreground ",
         "text-muted-foreground hover:text-foreground",
       )}
     >
-      <div className="flex gap-2 py-1.5 font-medium" ref={triggerRef}>
+      <div className="flex gap-2 py-1.5 px-3 font-medium" ref={triggerRef}>
         {icon && <SidebarIcon icon={icon} />}
         {name}
       </div>
@@ -215,7 +215,10 @@ function DocSidebarCategory(props: {
   );
 
   const triggerEl = href ? (
-    <Link href={href} className={cn("block w-full text-left font-medium")}>
+    <Link
+      className={cn("w-full py-1.5 px-3 text-left font-medium")}
+      href={href}
+    >
       {triggerElContent}
     </Link>
   ) : (
@@ -224,11 +227,11 @@ function DocSidebarCategory(props: {
 
   return (
     <CustomAccordion
-      defaultOpen={defaultOpen}
-      containerClassName="border-none"
-      triggerContainerClassName="text-base"
-      trigger={triggerEl}
       chevronPosition="right"
+      containerClassName="border-none"
+      defaultOpen={defaultOpen}
+      trigger={triggerEl}
+      triggerContainerClassName=""
     >
       <ul className="flex flex-col border-l-2 pl-4">
         {links.map((link, i) => {
@@ -248,9 +251,9 @@ export function DocSidebarMobile(props: ReferenceSideBarProps) {
   const [open, setOpen] = useState(false);
 
   return (
-    <DropdownMenu open={open} onOpenChange={setOpen}>
+    <DropdownMenu onOpenChange={setOpen} open={open}>
       <DropdownMenuTrigger asChild>
-        <Button className="w-full justify-between border bg-card py-3 text-left font-medium text-foreground xl:hidden">
+        <Button className="w-full justify-between border bg-card py-3 text-left text-foreground hover:bg-card xl:hidden">
           {props.name}
           <ChevronDownIcon
             className={clsx(
@@ -261,17 +264,17 @@ export function DocSidebarMobile(props: ReferenceSideBarProps) {
         </Button>
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent asChild sideOffset={10} align="center" side="bottom">
+      <DropdownMenuContent align="center" asChild side="bottom" sideOffset={10}>
         <div className="max-h-[70vh] w-[calc(100vw-32px)] overflow-y-auto rounded-lg border bg-card px-4">
           <DocSidebar
             {...props}
+            header={props.header}
             onLinkClick={() => {
               setOpen(false);
               if (props.onLinkClick) {
                 props.onLinkClick();
               }
             }}
-            header={props.header}
           />
         </div>
       </DropdownMenuContent>
@@ -300,7 +303,7 @@ function containsActiveHref(
 
 function SidebarIcon(props: { icon: StaticImport | React.ReactElement }) {
   if (isStaticImport(props.icon)) {
-    return <Image src={props.icon} alt="" className="size-4" />;
+    return <Image alt="" className="size-4" src={props.icon} />;
   }
   return (
     <div className="flex items-center justify-center [&>*]:size-4">

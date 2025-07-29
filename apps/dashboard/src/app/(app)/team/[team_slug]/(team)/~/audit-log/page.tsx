@@ -1,6 +1,6 @@
+import { redirect } from "next/navigation";
 import { getAuditLogs } from "@/api/audit-log";
 import { getTeamBySlug } from "@/api/team";
-import { redirect } from "next/navigation";
 import { getValidAccount } from "../../../../../account/settings/getAccount";
 import { AuditLogList } from "./_components/list";
 import { searchParamLoader } from "./search-params";
@@ -47,7 +47,7 @@ export default async function Page(props: {
   }
 
   return (
-    <div className="container flex flex-col gap-8">
+    <div className="flex flex-col gap-8">
       {auditLogs.data.result.length === 0 ? (
         <div className="py-12 text-center text-muted-foreground">
           <p className="text-sm">No audit events found</p>

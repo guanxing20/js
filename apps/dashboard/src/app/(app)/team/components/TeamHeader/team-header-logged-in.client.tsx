@@ -1,20 +1,20 @@
 "use client";
 
+import { useCallback, useState } from "react";
+import { toast } from "sonner";
+import type { ThirdwebClient } from "thirdweb";
+import { useActiveWallet, useDisconnect } from "thirdweb/react";
+import { doLogout } from "@/actions/auth-actions";
 import { createTeam } from "@/actions/createTeam";
 import { useIdentifyAccount } from "@/analytics/hooks/identify-account";
 import { useIdentifyTeam } from "@/analytics/hooks/identify-team";
 import { resetAnalytics } from "@/analytics/reset";
 import type { Project } from "@/api/projects";
 import type { Team } from "@/api/team";
+import { CustomConnectWallet } from "@/components/connect-wallet";
+import { LazyCreateProjectDialog } from "@/components/project/create-project-modal/LazyCreateAPIKeyDialog";
+import type { Account } from "@/hooks/useApi";
 import { useDashboardRouter } from "@/lib/DashboardRouter";
-import { CustomConnectWallet } from "@3rdweb-sdk/react/components/connect-wallet";
-import type { Account } from "@3rdweb-sdk/react/hooks/useApi";
-import { LazyCreateProjectDialog } from "components/settings/ApiKeys/Create/LazyCreateAPIKeyDialog";
-import { useCallback, useState } from "react";
-import { toast } from "sonner";
-import type { ThirdwebClient } from "thirdweb";
-import { useActiveWallet, useDisconnect } from "thirdweb/react";
-import { doLogout } from "../../../login/auth-actions";
 import {
   type TeamHeaderCompProps,
   TeamHeaderDesktopUI,
@@ -28,6 +28,11 @@ export function TeamHeaderLoggedIn(props: {
   account: Pick<Account, "email" | "id">;
   accountAddress: string;
   client: ThirdwebClient;
+  currentProjectSubpath?: {
+    label: string;
+    href: string;
+    icon: React.ReactNode;
+  };
 }) {
   // identify the account
   useIdentifyAccount({
@@ -61,13 +66,11 @@ export function TeamHeaderLoggedIn(props: {
   }, [router, activeWallet, disconnect]);
 
   const headerProps: TeamHeaderCompProps = {
-    currentProject: props.currentProject,
-    currentTeam: props.currentTeam,
-    teamsAndProjects: props.teamsAndProjects,
     account: props.account,
-    logout: logout,
+    accountAddress: props.accountAddress,
+    client: props.client,
     connectButton: (
-      <CustomConnectWallet isLoggedIn={true} client={props.client} />
+      <CustomConnectWallet client={props.client} isLoggedIn={true} />
     ),
     createProject: (team: Team) => {
       setCreateProjectDialogState({
@@ -84,14 +87,17 @@ export function TeamHeaderLoggedIn(props: {
           router.push(`/team/${res.data.slug}`);
         }),
         {
+          error: "Failed to create team",
           loading: "Creating team",
           success: "Team created",
-          error: "Failed to create team",
         },
       );
     },
-    client: props.client,
-    accountAddress: props.accountAddress,
+    currentProject: props.currentProject,
+    currentProjectSubpath: props.currentProjectSubpath,
+    currentTeam: props.currentTeam,
+    logout: logout,
+    teamsAndProjects: props.teamsAndProjects,
   };
 
   return (
@@ -101,22 +107,22 @@ export function TeamHeaderLoggedIn(props: {
 
       {createProjectDialogState.isOpen && (
         <LazyCreateProjectDialog
-          open={true}
-          teamSlug={createProjectDialogState.team.slug}
-          teamId={createProjectDialogState.team.id}
-          onOpenChange={() =>
-            setCreateProjectDialogState({
-              isOpen: false,
-            })
+          enableNebulaServiceByDefault={
+            createProjectDialogState.isOpen &&
+            createProjectDialogState.team.enabledScopes.includes("nebula")
           }
           onCreateAndComplete={() => {
             // refresh projects
             router.refresh();
           }}
-          enableNebulaServiceByDefault={
-            createProjectDialogState.isOpen &&
-            createProjectDialogState.team.enabledScopes.includes("nebula")
+          onOpenChange={() =>
+            setCreateProjectDialogState({
+              isOpen: false,
+            })
           }
+          open={true}
+          teamId={createProjectDialogState.team.id}
+          teamSlug={createProjectDialogState.team.slug}
         />
       )}
     </div>

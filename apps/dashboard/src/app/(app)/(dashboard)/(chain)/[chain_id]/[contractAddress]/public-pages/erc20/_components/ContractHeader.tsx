@@ -1,37 +1,42 @@
-import { Img } from "@/components/blocks/Img";
-import { CopyAddressButton } from "@/components/ui/CopyAddressButton";
-import { Button } from "@/components/ui/button";
-import { ToolTipLabel } from "@/components/ui/tooltip";
-import { resolveSchemeWithErrorHandler } from "@/lib/resolveSchemeWithErrorHandler";
-import { cn } from "@/lib/utils";
-import { ChainIconClient } from "components/icons/ChainIcon";
-import { DiscordIcon } from "components/icons/brand-icons/DiscordIcon";
-import { GithubIcon } from "components/icons/brand-icons/GithubIcon";
-import { InstagramIcon } from "components/icons/brand-icons/InstagramIcon";
-import { LinkedInIcon } from "components/icons/brand-icons/LinkedinIcon";
-import { RedditIcon } from "components/icons/brand-icons/RedditIcon";
-import { TelegramIcon } from "components/icons/brand-icons/TelegramIcon";
-import { TiktokIcon } from "components/icons/brand-icons/TiktokIcon";
-import { XIcon as TwitterXIcon } from "components/icons/brand-icons/XIcon";
-import { YoutubeIcon } from "components/icons/brand-icons/YoutubeIcon";
-import { ExternalLinkIcon, GlobeIcon } from "lucide-react";
+import {
+  ExternalLinkIcon,
+  GlobeIcon,
+  Settings2Icon,
+  UserIcon,
+} from "lucide-react";
 import Link from "next/link";
 import { useMemo } from "react";
-import type { ThirdwebContract } from "thirdweb";
+import { type ThirdwebContract, ZERO_ADDRESS } from "thirdweb";
 import type { ChainMetadata } from "thirdweb/chains";
+import { Img } from "@/components/blocks/Img";
+import { Button } from "@/components/ui/button";
+import { CopyAddressButton } from "@/components/ui/CopyAddressButton";
+import { ToolTipLabel } from "@/components/ui/tooltip";
+import { DiscordIcon } from "@/icons/brand-icons/DiscordIcon";
+import { GithubIcon } from "@/icons/brand-icons/GithubIcon";
+import { InstagramIcon } from "@/icons/brand-icons/InstagramIcon";
+import { LinkedInIcon } from "@/icons/brand-icons/LinkedinIcon";
+import { RedditIcon } from "@/icons/brand-icons/RedditIcon";
+import { TelegramIcon } from "@/icons/brand-icons/TelegramIcon";
+import { TiktokIcon } from "@/icons/brand-icons/TiktokIcon";
+import { XIcon as TwitterXIcon } from "@/icons/brand-icons/XIcon";
+import { YoutubeIcon } from "@/icons/brand-icons/YoutubeIcon";
+import { ChainIconClient } from "@/icons/ChainIcon";
+import { cn } from "@/lib/utils";
+import { resolveSchemeWithErrorHandler } from "@/utils/resolveSchemeWithErrorHandler";
 
 const platformToIcons: Record<string, React.FC<{ className?: string }>> = {
-  twitter: TwitterXIcon,
-  x: TwitterXIcon,
   discord: DiscordIcon,
-  telegram: TelegramIcon,
-  reddit: RedditIcon,
-  website: GlobeIcon,
   github: GithubIcon,
-  youtube: YoutubeIcon,
   instagram: InstagramIcon,
-  tiktok: TiktokIcon,
   linkedin: LinkedInIcon,
+  reddit: RedditIcon,
+  telegram: TelegramIcon,
+  tiktok: TiktokIcon,
+  twitter: TwitterXIcon,
+  website: GlobeIcon,
+  x: TwitterXIcon,
+  youtube: YoutubeIcon,
 };
 
 export function ContractHeaderUI(props: {
@@ -42,6 +47,8 @@ export function ContractHeaderUI(props: {
   clientContract: ThirdwebContract;
   socialUrls: object;
   imageClassName?: string;
+  contractCreator: string | null;
+  className?: string;
 }) {
   const socialUrls = useMemo(() => {
     const socialUrlsValue: { name: string; href: string }[] = [];
@@ -51,7 +58,7 @@ export function ContractHeaderUI(props: {
         typeof key === "string" &&
         isValidUrl(value)
       ) {
-        socialUrlsValue.push({ name: key, href: value });
+        socialUrlsValue.push({ href: value, name: key });
       }
     }
 
@@ -62,54 +69,68 @@ export function ContractHeaderUI(props: {
     ?.replace("Mainnet", "")
     .trim();
 
-  const explorersToShow = getExplorersToShow(props.chainMetadata);
+  const validBlockExplorer = getExplorerToShow(props.chainMetadata);
 
   return (
-    <div className="flex flex-col items-start gap-4 border-b border-dashed py-8 lg:flex-row lg:items-center">
-      {props.image && (
-        <Img
-          className={cn(
-            "size-20 shrink-0 rounded-full border bg-muted",
-            props.imageClassName,
-          )}
-          src={
-            props.image
-              ? resolveSchemeWithErrorHandler({
-                  uri: props.image,
-                  client: props.clientContract.client,
-                })
-              : ""
-          }
-          fallback={
-            <div className="flex items-center justify-center font-bold text-3xl text-muted-foreground/80">
-              {props.name[0]}
-            </div>
-          }
-        />
+    <div
+      className={cn(
+        "flex flex-col lg:flex-row lg:items-center gap-5 py-6 relative",
+        props.className,
       )}
+    >
+      <div className="flex">
+        <div className="border p-1 rounded-full bg-card">
+          <Img
+            className={cn("size-28 shrink-0 rounded-full bg-muted")}
+            fallback={
+              <div className="flex items-center justify-center font-bold text-5xl text-muted-foreground/50 capitalize">
+                {props.name[0]}
+              </div>
+            }
+            src={
+              props.image
+                ? resolveSchemeWithErrorHandler({
+                    client: props.clientContract.client,
+                    uri: props.image,
+                  })
+                : ""
+            }
+          />
+        </div>
+      </div>
 
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-2.5 flex-1">
         {/* top row */}
         <div className="flex flex-col gap-3">
           <div className="flex flex-col flex-wrap gap-3 lg:flex-row lg:items-center">
-            <h1 className="line-clamp-2 font-bold text-2xl tracking-tight lg:text-3xl">
+            <h1 className="font-semibold text-3xl tracking-tighter lg:text-5xl">
               {props.name}
             </h1>
 
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 ">
               <Link
-                href={`/${props.chainMetadata.slug}`}
                 className="flex w-fit shrink-0 items-center gap-2 rounded-3xl border border-border bg-card px-2.5 py-1.5 hover:bg-accent"
+                href={`/${props.chainMetadata.slug}`}
               >
                 <ChainIconClient
-                  src={props.chainMetadata.icon?.url || ""}
-                  client={props.clientContract.client}
                   className="size-4"
+                  client={props.clientContract.client}
+                  src={props.chainMetadata.icon?.url || ""}
                 />
                 {cleanedChainName && (
                   <span className="text-xs">{cleanedChainName}</span>
                 )}
               </Link>
+
+              {props.contractCreator &&
+                validBlockExplorer &&
+                props.contractCreator !== ZERO_ADDRESS && (
+                  <SocialLink
+                    href={`${validBlockExplorer.url}/address/${props.contractCreator}`}
+                    name="Contract Owner"
+                    icon={UserIcon}
+                  />
+                )}
 
               {socialUrls
                 .toSorted((a, b) => {
@@ -128,10 +149,10 @@ export function ContractHeaderUI(props: {
                 })
                 .map(({ name, href }) => (
                   <SocialLink
-                    key={name}
-                    name={name}
                     href={href}
                     icon={platformToIcons[name.toLowerCase()]}
+                    key={name}
+                    name={name}
                   />
                 ))}
             </div>
@@ -139,21 +160,46 @@ export function ContractHeaderUI(props: {
         </div>
 
         {/* bottom row */}
-        <div className="flex flex-row flex-wrap items-center gap-2">
+        <div className="flex flex-col items-end sm:flex-row flex-wrap sm:items-center gap-2 absolute top-6 right-0 sm:static w-1/2 sm:w-full">
           <CopyAddressButton
             address={props.clientContract.address}
-            copyIconPosition="left"
             className="rounded-full bg-card px-2.5 py-1.5 text-xs"
+            copyIconPosition="left"
+            tooltip="Copy contract address"
             variant="outline"
           />
 
-          {explorersToShow?.map((validBlockExplorer) => (
+          <ToolTipLabel
+            contentClassName="max-w-[300px]"
+            label={
+              <>
+                View this contract in thirdweb dashboard to view contract
+                management interface
+              </>
+            }
+          >
+            <Button
+              asChild
+              className="rounded-full bg-card gap-1.5 text-xs py-1.5 px-2.5 h-auto"
+              size="sm"
+              variant="outline"
+            >
+              <Link
+                href={`/team/~/~/contract/${props.chainMetadata.slug}/${props.clientContract.address}`}
+              >
+                <Settings2Icon className="size-3.5 text-muted-foreground" />
+                Manage Contract
+              </Link>
+            </Button>
+          </ToolTipLabel>
+
+          {validBlockExplorer && (
             <BadgeLink
+              href={`${validBlockExplorer.url.endsWith("/") ? validBlockExplorer.url : `${validBlockExplorer.url}/`}address/${props.clientContract.address}`}
               key={validBlockExplorer.url}
               name={validBlockExplorer.name}
-              href={`${validBlockExplorer.url.endsWith("/") ? validBlockExplorer.url : `${validBlockExplorer.url}/`}address/${props.clientContract.address}`}
             />
-          ))}
+          )}
 
           {/* TODO - render social links here */}
         </div>
@@ -171,25 +217,25 @@ function isValidUrl(url: string) {
   }
 }
 
-function getExplorersToShow(chainMetadata: ChainMetadata) {
-  const validBlockExplorers = chainMetadata.explorers
-    ?.filter((e) => e.standard === "EIP3091")
-    ?.slice(0, 2);
+function getExplorerToShow(chainMetadata: ChainMetadata) {
+  const validBlockExplorers = chainMetadata.explorers?.filter(
+    (e) => e.standard === "EIP3091",
+  );
 
-  return validBlockExplorers?.slice(0, 1);
+  return validBlockExplorers?.[0];
 }
 
-function BadgeLink(props: {
-  name: string;
-  href: string;
-}) {
+function BadgeLink(props: { name: string; href: string; className?: string }) {
   return (
     <Button
-      variant="outline"
       asChild
-      className="!h-auto gap-2 rounded-full bg-card px-3 py-1.5 text-xs capitalize"
+      className={cn(
+        "!h-auto gap-2 rounded-full bg-card px-3 py-1.5 text-xs capitalize",
+        props.className,
+      )}
+      variant="outline"
     >
-      <Link href={props.href} target="_blank" rel="noopener noreferrer">
+      <Link href={props.href} rel="noopener noreferrer" target="_blank">
         {props.name}
         <ExternalLinkIcon className="size-3 text-muted-foreground/70" />
       </Link>
@@ -203,20 +249,20 @@ function SocialLink(props: {
   icon?: React.FC<{ className?: string }>;
 }) {
   return (
-    <ToolTipLabel label={props.name} contentClassName="capitalize">
+    <ToolTipLabel contentClassName="capitalize" label={props.name}>
       <Button
-        variant="outline"
         asChild
         className={cn(
           "!h-auto gap-2 rounded-full bg-card px-3 py-1.5 text-xs capitalize",
           props.icon && "rounded-full p-1.5",
         )}
+        variant="outline"
       >
         <Link
-          href={props.href}
-          target="_blank"
           className="capitalize"
+          href={props.href}
           rel="noopener noreferrer"
+          target="_blank"
         >
           {props.icon ? <props.icon className="size-4" /> : props.name}
           {!props.icon && (

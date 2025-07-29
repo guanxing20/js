@@ -1,118 +1,115 @@
-import {
-  type WebhookResponse,
-  getSupportedWebhookChains,
-  getWebhooks,
-} from "@/api/insight/webhooks";
+import { notFound, redirect } from "next/navigation";
+import { isFeatureFlagEnabled } from "@/analytics/posthog-server";
+import { getWebhookSummary } from "@/api/analytics";
+import { getAuthToken } from "@/api/auth-token";
+import { getSupportedWebhookChains } from "@/api/insight/webhooks";
 import { getProject } from "@/api/projects";
-import { UnderlineLink } from "@/components/ui/UnderlineLink";
+import { getAvailableTopics, getWebhookConfigs } from "@/api/webhook-configs";
 import { getClientThirdwebClient } from "@/constants/thirdweb-client.client";
-import { notFound } from "next/navigation";
-import { getAuthToken } from "../../../../../api/lib/getAuthToken";
-import { CreateWebhookModal } from "./components/CreateWebhookModal";
-import { WebhooksTable } from "./components/WebhooksTable";
+import { getValidAccount } from "../../../../../account/settings/getAccount";
+import { WebhooksOverview } from "./components/overview";
 
-export default async function WebhooksPage({
-  params,
-}: { params: Promise<{ team_slug: string; project_slug: string }> }) {
-  let webhooks: WebhookResponse[] = [];
-  let errorMessage = "";
-  let supportedChainIds: number[] = [];
-
-  const [authToken, resolvedParams] = await Promise.all([
+export default async function WebhooksPage(props: {
+  params: Promise<{ team_slug: string; project_slug: string }>;
+}) {
+  const [authToken, params, account] = await Promise.all([
     getAuthToken(),
-    params,
+    props.params,
+    getValidAccount(),
   ]);
 
-  const project = await getProject(
-    resolvedParams.team_slug,
-    resolvedParams.project_slug,
-  );
+  if (!account || !authToken) {
+    notFound();
+  }
+
+  const [isFeatureEnabled, project] = await Promise.all([
+    isFeatureFlagEnabled({
+      flagKey: "centralized-webhooks",
+      accountId: account.id,
+      email: account.email,
+    }),
+    getProject(params.team_slug, params.project_slug),
+  ]);
 
   if (!project || !authToken) {
     notFound();
   }
 
-  const projectClientId = project.publishableKey;
-
-  try {
-    const webhooksRes = await getWebhooks(projectClientId);
-    if (webhooksRes.error) {
-      errorMessage = webhooksRes.error;
-    } else if (webhooksRes.data) {
-      webhooks = webhooksRes.data;
-    }
-
-    const supportedChainsRes = await getSupportedWebhookChains();
-    if ("chains" in supportedChainsRes) {
-      supportedChainIds = supportedChainsRes.chains;
-    } else {
-      errorMessage = supportedChainsRes.error;
-    }
-  } catch (error) {
-    errorMessage = "Failed to load webhooks. Please try again later.";
-    console.error("Error loading project or webhooks", error);
+  if (!isFeatureEnabled) {
+    redirect(
+      `/team/${params.team_slug}/${params.project_slug}/webhooks/contracts`,
+    );
   }
 
+  // Fetch webhook configs, topics, and supported chains in parallel
+  const [webhookConfigsResult, topicsResult, supportedChainsResult] =
+    await Promise.all([
+      getWebhookConfigs({
+        projectIdOrSlug: params.project_slug,
+        teamIdOrSlug: params.team_slug,
+      }),
+      getAvailableTopics(),
+      getSupportedWebhookChains(),
+    ]);
+
+  if (
+    webhookConfigsResult.status === "error" ||
+    topicsResult.status === "error"
+  ) {
+    notFound();
+  }
+
+  const webhookConfigs = webhookConfigsResult.data || [];
+  const topics = topicsResult.data || [];
+
+  // Get supported chain IDs
+  let supportedChainIds: number[] = [];
+  if ("chains" in supportedChainsResult) {
+    supportedChainIds = supportedChainsResult.chains;
+  }
+
+  // Create client
   const client = getClientThirdwebClient({
     jwt: authToken,
     teamId: project.teamId,
   });
 
+  // Fetch metrics for all webhooks in parallel
+  const webhookMetrics = await Promise.all(
+    webhookConfigs.map(async (config) => {
+      const metricsResult = await getWebhookSummary({
+        from: new Date(Date.now() - 24 * 60 * 60 * 1000),
+        period: "day",
+        projectId: project.id,
+        teamId: project.teamId, // 24 hours ago
+        to: new Date(),
+        webhookId: config.id,
+      });
+
+      return {
+        metrics:
+          "error" in metricsResult ? null : (metricsResult.data[0] ?? null),
+        webhookId: config.id,
+      };
+    }),
+  );
+
+  // Create a map for easy lookup
+  const metricsMap = new Map(
+    webhookMetrics.map((item) => [item.webhookId, item.metrics]),
+  );
+
   return (
-    <div className="flex grow flex-col">
-      <div className="border-b py-10">
-        <div className="container max-w-7xl">
-          <h1 className="mb-1 font-semibold text-3xl tracking-tight">
-            Webhooks
-          </h1>
-          <p className="text-muted-foreground text-sm">
-            Create and manage webhooks to get notified about blockchain events,
-            transactions and more.{" "}
-            <UnderlineLink
-              target="_blank"
-              rel="noopener noreferrer"
-              href="https://portal.thirdweb.com/insight/webhooks"
-            >
-              Learn more about webhooks.
-            </UnderlineLink>
-          </p>
-        </div>
-      </div>
-      <div className="h-6" />
-      <div className="container max-w-7xl">
-        {errorMessage ? (
-          <div className="flex flex-col items-center justify-center gap-4 rounded-lg border border-destructive bg-destructive/10 p-12 text-center">
-            <div>
-              <h3 className="mb-1 font-medium text-destructive text-lg">
-                Unable to load webhooks
-              </h3>
-              <p className="text-muted-foreground">{errorMessage}</p>
-            </div>
-          </div>
-        ) : webhooks.length > 0 ? (
-          <WebhooksTable
-            webhooks={webhooks}
-            projectClientId={projectClientId}
-            client={client}
-            supportedChainIds={supportedChainIds}
-          />
-        ) : (
-          <div className="flex flex-col items-center justify-center gap-4 rounded-lg border border-border p-12 text-center">
-            <div>
-              <h3 className="mb-1 font-medium text-lg">No webhooks found</h3>
-              <p className="text-muted-foreground">
-                Create a webhook to get started.
-              </p>
-            </div>
-            <CreateWebhookModal
-              client={client}
-              projectClientId={projectClientId}
-              supportedChainIds={supportedChainIds}
-            />
-          </div>
-        )}
-      </div>
-      <div className="h-20" />
-    </div>
+    <WebhooksOverview
+      client={client}
+      metricsMap={metricsMap}
+      projectId={project.id}
+      projectSlug={params.project_slug}
+      supportedChainIds={supportedChainIds}
+      teamId={project.teamId}
+      teamSlug={params.team_slug}
+      topics={topics}
+      webhookConfigs={webhookConfigs}
+    />
   );
 }

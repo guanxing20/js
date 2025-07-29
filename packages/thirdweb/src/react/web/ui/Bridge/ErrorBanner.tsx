@@ -1,5 +1,8 @@
 "use client";
 import { CrossCircledIcon } from "@radix-ui/react-icons";
+import { useQuery } from "@tanstack/react-query";
+import { trackPayEvent } from "../../../../analytics/track/pay.js";
+import type { ThirdwebClient } from "../../../../client/client.js";
 import { useCustomTheme } from "../../../core/design-system/CustomThemeProvider.js";
 import { iconSize } from "../../../core/design-system/index.js";
 import { useBridgeError } from "../../../core/hooks/useBridgeError.js";
@@ -22,36 +25,54 @@ interface ErrorBannerProps {
    * Called when user wants to cancel
    */
   onCancel?: () => void;
+  client: ThirdwebClient;
 }
 
-export function ErrorBanner({ error, onRetry, onCancel }: ErrorBannerProps) {
+export function ErrorBanner({
+  error,
+  onRetry,
+  onCancel,
+  client,
+}: ErrorBannerProps) {
   const theme = useCustomTheme();
 
   const { userMessage } = useBridgeError({ error });
 
+  useQuery({
+    queryFn: () => {
+      trackPayEvent({
+        client,
+        error: error.message,
+        event: "ub:ui:error",
+      });
+      return true;
+    },
+    queryKey: ["error_banner", userMessage],
+  });
+
   return (
-    <Container flex="column" gap="md" p="lg" fullHeight>
+    <Container flex="column" fullHeight gap="md" p="lg">
       {/* Error Icon and Message */}
       <Container flex="row" gap="md" style={{ alignItems: "flex-start" }}>
         <Container
           center="both"
           style={{
-            width: "24px",
-            height: "24px",
-            borderRadius: "50%",
             backgroundColor: theme.colors.tertiaryBg,
+            borderRadius: "50%",
             flexShrink: 0,
+            height: "24px",
+            width: "24px",
           }}
         >
           <CrossCircledIcon
-            width={iconSize.md}
-            height={iconSize.md}
             color={theme.colors.danger}
+            height={iconSize.md}
+            width={iconSize.md}
           />
         </Container>
 
-        <Container flex="column" gap="sm" style={{ flex: 1 }} fullHeight>
-          <Text size="lg" color="primaryText">
+        <Container flex="column" fullHeight gap="sm" style={{ flex: 1 }}>
+          <Text color="primaryText" size="lg">
             Error
           </Text>
           <Container
@@ -62,7 +83,7 @@ export function ErrorBanner({ error, onRetry, onCancel }: ErrorBannerProps) {
             }}
           >
             <Container flex="column" gap="sm" style={{ flex: 1 }}>
-              <Text size="sm" color="secondaryText">
+              <Text color="secondaryText" size="sm">
                 {userMessage}
               </Text>
             </Container>
@@ -70,11 +91,11 @@ export function ErrorBanner({ error, onRetry, onCancel }: ErrorBannerProps) {
 
           {/* Action Buttons */}
           <Container flex="row" gap="sm" style={{ justifyContent: "flex-end" }}>
-            <Button variant="primary" onClick={onRetry}>
+            <Button onClick={onRetry} variant="primary">
               Try Again
             </Button>
             {onCancel && (
-              <Button variant="secondary" onClick={onCancel}>
+              <Button onClick={onCancel} variant="secondary">
                 Cancel
               </Button>
             )}

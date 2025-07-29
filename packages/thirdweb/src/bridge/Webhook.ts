@@ -8,57 +8,82 @@ const hexSchema = z
 const addressSchema = z
   .string()
   .check(z.refine(isAddress, { message: "Invalid address" }));
+const tokenSchema = z.object({
+  address: addressSchema,
+  chainId: z.coerce.number(),
+  decimals: z.coerce.number(),
+  iconUri: z.optional(z.string()),
+  name: z.string(),
+  priceUsd: z.coerce.number(),
+  symbol: z.string(),
+});
 
-const webhookSchema = z.union([
+const onchainWebhookSchema = z.discriminatedUnion("version", [
   z.object({
-    version: z.literal(1),
     data: z.object({}),
+    type: z.literal("pay.onchain-transaction"),
+    version: z.literal(1),
   }),
   z.object({
-    version: z.literal(2),
     data: z.object({
+      action: z.enum(["TRANSFER", "BUY", "SELL"]),
+      clientId: z.string(),
+      destinationAmount: z.coerce.bigint(),
+      destinationToken: tokenSchema,
+      developerFeeBps: z.coerce.number(),
+      developerFeeRecipient: addressSchema,
+      originAmount: z.coerce.bigint(),
+      originToken: tokenSchema,
       paymentId: z.string(),
       // only exists when the payment was triggered from a developer specified payment link
       paymentLinkId: z.optional(z.string()),
-      clientId: z.string(),
-      action: z.enum(["TRANSFER", "BUY", "SELL"]),
-      status: z.enum(["PENDING", "FAILED", "COMPLETED"]),
-      originToken: z.object({
-        chainId: z.coerce.number(),
-        address: addressSchema,
-        name: z.string(),
-        symbol: z.string(),
-        decimals: z.coerce.number(),
-        priceUsd: z.coerce.number(),
-        iconUri: z.optional(z.string()),
-      }),
-      originAmount: z.string(),
-      destinationToken: z.object({
-        chainId: z.coerce.number(),
-        address: addressSchema,
-        name: z.string(),
-        symbol: z.string(),
-        decimals: z.coerce.number(),
-        priceUsd: z.coerce.number(),
-        iconUri: z.optional(z.string()),
-      }),
-      destinationAmount: z.string(),
-      sender: addressSchema,
+      purchaseData: z.optional(z.record(z.string(), z.unknown())),
       receiver: addressSchema,
-      type: z.string(),
+      sender: addressSchema,
+      status: z.enum(["PENDING", "FAILED", "COMPLETED"]),
       transactions: z.array(
         z.object({
           chainId: z.coerce.number(),
           transactionHash: hexSchema,
         }),
       ),
-      developerFeeBps: z.coerce.number(),
-      developerFeeRecipient: addressSchema,
-      purchaseData: z.optional(z.record(z.string(), z.unknown())),
+      type: z.string(),
     }),
+    type: z.literal("pay.onchain-transaction"),
+    version: z.literal(2),
   }),
 ]);
 
+const onrampWebhookSchema = z.discriminatedUnion("version", [
+  z.object({
+    data: z.object({}),
+    type: z.literal("pay.onramp-transaction"),
+    version: z.literal(1),
+  }),
+  z.object({
+    data: z.object({
+      amount: z.coerce.bigint(),
+      currency: z.string(),
+      currencyAmount: z.number(),
+      id: z.string(),
+      onramp: z.string(),
+      paymentLinkId: z.optional(z.string()),
+      purchaseData: z.unknown(),
+      receiver: addressSchema,
+      sender: z.optional(addressSchema),
+      status: z.enum(["PENDING", "COMPLETED", "FAILED"]),
+      token: tokenSchema,
+      transactionHash: z.optional(hexSchema),
+    }),
+    type: z.literal("pay.onramp-transaction"),
+    version: z.literal(2),
+  }),
+]);
+
+const webhookSchema = z.discriminatedUnion("type", [
+  onchainWebhookSchema,
+  onrampWebhookSchema,
+]);
 export type WebhookPayload = Exclude<
   z.infer<typeof webhookSchema>,
   { version: 1 }
@@ -70,8 +95,8 @@ export type WebhookPayload = Exclude<
  * @param payload - The raw text body received from thirdweb.
  * @param headers - The webhook headers received from thirdweb.
  * @param secret - The webhook secret to verify the payload with.
- * @beta
  * @bridge Webhook
+ * @beta
  */
 export async function parse(
   /**
@@ -93,7 +118,7 @@ export async function parse(
    * The tolerance in seconds for the timestamp verification.
    */
   tolerance = 300, // Default to 5 minutes if not specified
-) {
+): Promise<WebhookPayload> {
   // Get the signature and timestamp from headers
   const receivedSignature =
     headers["x-payload-signature"] || headers["x-pay-signature"];
@@ -120,7 +145,7 @@ export async function parse(
   const key = await crypto.subtle.importKey(
     "raw",
     encoder.encode(secret),
-    { name: "HMAC", hash: "SHA-256" },
+    { hash: "SHA-256", name: "HMAC" },
     false,
     ["sign"],
   );
@@ -158,5 +183,5 @@ export async function parse(
     );
   }
 
-  return parsedPayload;
+  return parsedPayload satisfies WebhookPayload;
 }

@@ -1,6 +1,11 @@
 "use client";
 
-import { Spinner } from "@/components/ui/Spinner/Spinner";
+import { formatDistanceToNow } from "date-fns";
+import { CircleArrowUpIcon, TriangleAlertIcon } from "lucide-react";
+import Link from "next/link";
+import { useState } from "react";
+import { toast } from "sonner";
+import invariant from "tiny-invariant";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,6 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Spinner } from "@/components/ui/Spinner/Spinner";
 import {
   Select,
   SelectContent,
@@ -26,13 +32,7 @@ import {
   useEngineGetDeploymentPublicConfiguration,
   useEngineSystemHealth,
   useEngineUpdateDeployment,
-} from "@3rdweb-sdk/react/hooks/useEngine";
-import { formatDistanceToNow } from "date-fns";
-import { CircleArrowUpIcon, TriangleAlertIcon } from "lucide-react";
-import Link from "next/link";
-import { useState } from "react";
-import { toast } from "sonner";
-import invariant from "tiny-invariant";
+} from "@/hooks/useEngine";
 
 export const EngineVersionBadge = ({
   instance,
@@ -63,7 +63,7 @@ export const EngineVersionBadge = ({
   // Hide the change version modal unless owner.
   if (!instance.deploymentId) {
     return (
-      <Button variant="outline" asChild className="hover:bg-transparent">
+      <Button asChild className="hover:bg-transparent" variant="outline">
         <div>{currentVersion}</div>
       </Button>
     );
@@ -80,9 +80,9 @@ export const EngineVersionBadge = ({
         leftIcon={<CircleArrowUpIcon className="size-4 text-link-foreground" />}
       >
         <Button
-          variant="outline"
           className="relative"
           onClick={() => setModalOpen(true)}
+          variant="outline"
         >
           {currentVersion}
 
@@ -96,10 +96,10 @@ export const EngineVersionBadge = ({
       </ToolTipLabel>
 
       <ChangeVersionModal
-        open={isModalOpen}
-        onOpenChange={setModalOpen}
-        instance={instance}
         currentVersion={currentVersion}
+        instance={instance}
+        onOpenChange={setModalOpen}
+        open={isModalOpen}
         serverVersions={serverVersions}
         teamSlug={teamSlug}
       />
@@ -131,7 +131,7 @@ const ChangeVersionModal = (props: {
   if (!instance.deploymentId) {
     // Self-hosted modal: prompt to update manually.
     return (
-      <Dialog open={open} onOpenChange={onOpenChange}>
+      <Dialog onOpenChange={onOpenChange} open={open}>
         <DialogContent className="max-w-[400px]">
           <DialogHeader>
             <DialogTitle className="mb-6 pr-4 font-semibold text-2xl tracking-tight">
@@ -140,10 +140,10 @@ const ChangeVersionModal = (props: {
             <DialogDescription>
               View the{" "}
               <Link
-                href="https://github.com/thirdweb-dev/engine/releases"
-                target="_blank"
-                rel="noopener noreferrer"
                 className="text-link-foreground hover:text-foreground"
+                href="https://github.com/thirdweb-dev/engine/releases"
+                rel="noopener noreferrer"
+                target="_blank"
               >
                 latest changelog
               </Link>
@@ -161,13 +161,13 @@ const ChangeVersionModal = (props: {
 
     try {
       const promise = updateDeploymentMutation.mutateAsync({
-        teamSlug,
         deploymentId: instance.deploymentId,
         serverVersion: selectedVersion,
+        teamSlug,
       });
       toast.promise(promise, {
-        success: `Updating your Engine to ${selectedVersion}.`,
         error: "Unexpected error updating Engine.",
+        success: `Updating your Engine to ${selectedVersion}.`,
       });
       await promise;
     } finally {
@@ -177,7 +177,7 @@ const ChangeVersionModal = (props: {
 
   // For cloud-hosted, prompt the user to select a version to update to.
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog onOpenChange={onOpenChange} open={open}>
       <DialogContent className="max-w-[400px]">
         <DialogHeader>
           <DialogTitle>Update Engine version</DialogTitle>
@@ -198,10 +198,10 @@ const ChangeVersionModal = (props: {
                   const isLatestVersion = idx === 0;
                   return (
                     <SelectItem
+                      disabled={isCurrentVersion}
+                      id={name}
                       key={name}
                       value={name}
-                      id={name}
-                      disabled={isCurrentVersion}
                     >
                       <span>{name}</span>
                       <span className="ml-4 text-muted-foreground">
@@ -226,10 +226,10 @@ const ChangeVersionModal = (props: {
           {currentVersion.startsWith("v") && (
             <div>
               <Link
-                href={`https://github.com/thirdweb-dev/engine/compare/${currentVersion}...${selectedVersion}`}
-                target="_blank"
-                rel="noopener noreferrer"
                 className="text-link-foreground hover:text-foreground"
+                href={`https://github.com/thirdweb-dev/engine/compare/${currentVersion}...${selectedVersion}`}
+                rel="noopener noreferrer"
+                target="_blank"
               >
                 View changes: {currentVersion} &rarr; {selectedVersion}
               </Link>
@@ -251,18 +251,18 @@ const ChangeVersionModal = (props: {
 
         <DialogFooter className="mt-5">
           <Button
-            type="button"
             onClick={() => onOpenChange(false)}
+            type="button"
             variant="outline"
           >
             Close
           </Button>
           <Button
-            type="submit"
-            onClick={onClickUpdate}
-            variant="primary"
             className="gap-2"
             disabled={selectedVersion === currentVersion}
+            onClick={onClickUpdate}
+            type="submit"
+            variant="primary"
           >
             {updateDeploymentMutation.isPending ? (
               <Spinner className="size-4" />

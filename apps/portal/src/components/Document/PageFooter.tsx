@@ -1,20 +1,29 @@
 import {
-  BadgeHelpIcon,
   BrainIcon,
   type LucideIcon,
   ScrollTextIcon,
   VideoIcon,
 } from "lucide-react";
-import { DocLink } from ".";
 import { Feedback } from "../others/Feedback";
+import type { SidebarLink } from "../others/Sidebar";
 import { Subscribe } from "../others/Subscribe";
+import { DocLink } from ".";
 import { AutoEditPageButton } from "./AutoEditPageButton";
+import { AutoNextPageButton } from "./AutoNextPageButton";
 
-export function PageFooter(props: { editPageButton?: true }) {
+export function PageFooter(props: {
+  editPageButton?: true;
+  sidebarLinks?: SidebarLink[];
+}) {
   return (
     <footer className="flex flex-col gap-7 pb-20" data-noindex>
-      <div className="flex flex-col justify-between gap-7 md:flex-row md:items-center">
-        {props.editPageButton && <AutoEditPageButton />}
+      <div className="flex flex-col justify-between gap-7">
+        <div className="flex gap-4 justify-between items-center">
+          {props.editPageButton && <AutoEditPageButton />}
+          {props.sidebarLinks && (
+            <AutoNextPageButton sidebarLinks={props.sidebarLinks} />
+          )}
+        </div>
         <Feedback />
       </div>
       <div className="h-1 border-t" />
@@ -30,31 +39,24 @@ function Links() {
   return (
     <ul className="flex flex-col gap-3">
       <FooterLinkItem
-        prefix="Need help?"
-        label="Visit our support site"
-        href="https://thirdweb.com/support"
-        icon={BadgeHelpIcon}
-      />
-
-      <FooterLinkItem
-        prefix="Watch our"
-        label="video Tutorials"
         href="https://www.youtube.com/@thirdweb_"
         icon={VideoIcon}
+        label="video Tutorials"
+        prefix="Watch our"
       />
 
       <FooterLinkItem
-        prefix="View our"
-        label="changelog"
         href="/changelog"
         icon={ScrollTextIcon}
+        label="changelog"
+        prefix="View our"
       />
 
       <FooterLinkItem
-        prefix="Using AI?"
-        label="View llms.txt"
         href="/llms-full.txt"
         icon={BrainIcon}
+        label="View llms.txt"
+        prefix="Using AI?"
       />
     </ul>
   );

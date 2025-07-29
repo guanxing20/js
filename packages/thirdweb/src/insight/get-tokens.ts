@@ -26,6 +26,7 @@ export async function getOwnedTokens(args: {
   client: ThirdwebClient;
   chains: Chain[];
   ownerAddress: string;
+  tokenAddress?: string;
   queryOptions?: Omit<
     GetV1TokensData["query"],
     "owner_address" | "chain_id" | "chain"
@@ -45,17 +46,18 @@ export async function getOwnedTokens(args: {
     import("../utils/json.js"),
   ]);
 
-  const { client, chains, ownerAddress, queryOptions } = args;
+  const { client, chains, ownerAddress, tokenAddress, queryOptions } = args;
 
   await assertInsightEnabled(chains);
 
   const defaultQueryOptions: GetV1TokensData["query"] = {
-    owner_address: ownerAddress,
     chain_id: chains.length > 0 ? chains.map((chain) => chain.id) : [1],
     include_native: "true",
     include_spam: "false",
-    metadata: "true",
     limit: 50,
+    metadata: "true",
+    owner_address: [ownerAddress],
+    token_address: tokenAddress ? [tokenAddress] : undefined,
   };
 
   const result = await getV1Tokens({
@@ -84,13 +86,13 @@ async function transformOwnedToken(
     const decimals = t.decimals ?? 18;
     const value = BigInt(t.balance);
     return {
-      value,
-      displayValue: toTokens(value, decimals),
-      tokenAddress: t.token_address,
       chainId: t.chain_id,
       decimals,
-      symbol: t.symbol ?? "",
+      displayValue: toTokens(value, decimals),
       name: t.name ?? "",
+      symbol: t.symbol ?? "",
+      tokenAddress: t.token_address,
+      value,
     };
   });
 }

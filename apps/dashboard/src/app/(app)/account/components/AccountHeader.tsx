@@ -1,18 +1,18 @@
 "use client";
 
-import { createTeam } from "@/actions/createTeam";
-import { resetAnalytics } from "@/analytics/reset";
-import type { Project } from "@/api/projects";
-import type { Team } from "@/api/team";
-import { useDashboardRouter } from "@/lib/DashboardRouter";
-import { CustomConnectWallet } from "@3rdweb-sdk/react/components/connect-wallet";
-import type { Account } from "@3rdweb-sdk/react/hooks/useApi";
-import { LazyCreateProjectDialog } from "components/settings/ApiKeys/Create/LazyCreateAPIKeyDialog";
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
 import type { ThirdwebClient } from "thirdweb";
 import { useActiveWallet, useDisconnect } from "thirdweb/react";
-import { doLogout } from "../../login/auth-actions";
+import { doLogout } from "@/actions/auth-actions";
+import { createTeam } from "@/actions/createTeam";
+import { resetAnalytics } from "@/analytics/reset";
+import type { Project } from "@/api/projects";
+import type { Team } from "@/api/team";
+import { CustomConnectWallet } from "@/components/connect-wallet";
+import { LazyCreateProjectDialog } from "@/components/project/create-project-modal/LazyCreateAPIKeyDialog";
+import type { Account } from "@/hooks/useApi";
+import { useDashboardRouter } from "@/lib/DashboardRouter";
 import {
   type AccountHeaderCompProps,
   AccountHeaderDesktopUI,
@@ -47,15 +47,16 @@ export function AccountHeader(props: {
   }, [router, disconnect, wallet]);
 
   const headerProps: AccountHeaderCompProps = {
-    teamsAndProjects: props.teamsAndProjects,
-    logout: logout,
+    account: props.account,
+    accountAddress: props.accountAddress,
+    client: props.client,
     connectButton: (
-      <CustomConnectWallet isLoggedIn={true} client={props.client} />
+      <CustomConnectWallet client={props.client} isLoggedIn={true} />
     ),
     createProject: (team: Team) =>
       setCreateProjectDialogState({
-        team,
         isOpen: true,
+        team,
       }),
     createTeam: () => {
       toast.promise(
@@ -66,15 +67,14 @@ export function AccountHeader(props: {
           router.push(`/team/${res.data.slug}`);
         }),
         {
+          error: "Failed to create team",
           loading: "Creating team",
           success: "Team created",
-          error: "Failed to create team",
         },
       );
     },
-    account: props.account,
-    client: props.client,
-    accountAddress: props.accountAddress,
+    logout: logout,
+    teamsAndProjects: props.teamsAndProjects,
   };
 
   return (
@@ -84,22 +84,22 @@ export function AccountHeader(props: {
 
       {createProjectDialogState.isOpen && (
         <LazyCreateProjectDialog
-          open={true}
-          onOpenChange={() =>
-            setCreateProjectDialogState({
-              isOpen: false,
-            })
+          enableNebulaServiceByDefault={
+            createProjectDialogState.isOpen &&
+            createProjectDialogState.team.enabledScopes.includes("nebula")
           }
           onCreateAndComplete={() => {
             // refresh projects
             router.refresh();
           }}
+          onOpenChange={() =>
+            setCreateProjectDialogState({
+              isOpen: false,
+            })
+          }
+          open={true}
           teamId={createProjectDialogState.team.id}
           teamSlug={createProjectDialogState.team.slug}
-          enableNebulaServiceByDefault={
-            createProjectDialogState.isOpen &&
-            createProjectDialogState.team.enabledScopes.includes("nebula")
-          }
         />
       )}
     </div>

@@ -1,9 +1,9 @@
+import { notFound } from "next/navigation";
+import { getAuthToken } from "@/api/auth-token";
 import { getTeamBySlug } from "@/api/team";
 import { getClientThirdwebClient } from "@/constants/thirdweb-client.client";
-import { notFound } from "next/navigation";
+import { loginRedirect } from "@/utils/redirects";
 import { getValidAccount } from "../../../../../../../account/settings/getAccount";
-import { getAuthToken } from "../../../../../../../api/lib/getAuthToken";
-import { loginRedirect } from "../../../../../../../login/loginRedirect";
 import { getEngineInstance } from "./getEngineInstance";
 
 export async function engineInstancePageHandler(params: {
@@ -24,10 +24,10 @@ export async function engineInstancePageHandler(params: {
   }
 
   const instance = await getEngineInstance({
-    teamIdOrSlug: params.teamSlug,
+    accountId: account.id,
     authToken,
     engineId: params.engineId,
-    accountId: account.id,
+    teamIdOrSlug: params.teamSlug,
   });
 
   if (!instance || !team) {
@@ -40,5 +40,5 @@ export async function engineInstancePageHandler(params: {
     teamId: team.id,
   });
 
-  return { instance, authToken, account, client };
+  return { account, authToken, client, instance };
 }

@@ -1,9 +1,9 @@
+import { notFound } from "next/navigation";
+import { getAuthToken } from "@/api/auth-token";
 import { getTeamBySlug } from "@/api/team";
 import { getClientThirdwebClient } from "@/constants/thirdweb-client.client";
-import { notFound } from "next/navigation";
-import { getAuthToken } from "../../../../api/lib/getAuthToken";
-import { TeamOnboardingLayout } from "../../../../login/onboarding/onboarding-layout";
-import { InviteTeamMembers } from "../../../../login/onboarding/team-onboarding/team-onboarding";
+import { TeamOnboardingLayout } from "../../../../../login/onboarding/onboarding-layout";
+import { InviteTeamMembers } from "../../../../../login/onboarding/team-onboarding/team-onboarding";
 
 export default async function Page(props: {
   params: Promise<{ team_slug: string }>;
@@ -25,7 +25,7 @@ export default async function Page(props: {
 
   return (
     <TeamOnboardingLayout currentStep={3}>
-      <InviteTeamMembers team={team} client={client} />
+      <InviteTeamMembers client={client} team={team} />
     </TeamOnboardingLayout>
   );
 }

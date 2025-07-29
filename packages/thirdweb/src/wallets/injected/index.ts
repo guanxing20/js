@@ -1,13 +1,16 @@
 import type { EIP1193Provider } from "viem";
 import {
-  type SignTypedDataParameters,
   getTypesForEIP712Domain,
+  type SignTypedDataParameters,
   serializeTypedData,
+  stringify,
   validateTypedData,
 } from "viem";
 import { isInsufficientFundsError } from "../../analytics/track/helpers.js";
-import { trackTransaction } from "../../analytics/track/transaction.js";
-import { trackInsufficientFundsError } from "../../analytics/track/transaction.js";
+import {
+  trackInsufficientFundsError,
+  trackTransaction,
+} from "../../analytics/track/transaction.js";
 import type { Chain } from "../../chains/types.js";
 import { getCachedChain, getChainMetadata } from "../../chains/utils.js";
 import type { ThirdwebClient } from "../../client/client.js";
@@ -20,6 +23,10 @@ import {
 } from "../../utils/encoding/hex.js";
 import { parseTypedData } from "../../utils/signatures/helpers/parse-typed-data.js";
 import type { InjectedSupportedWalletIds } from "../__generated__/wallet-ids.js";
+import { toGetCallsStatusResponse } from "../eip5792/get-calls-status.js";
+import { toGetCapabilitiesResult } from "../eip5792/get-capabilities.js";
+import { toProviderCallParams } from "../eip5792/send-calls.js";
+import type { GetCallsStatusRawResponse } from "../eip5792/types.js";
 import type { Account, SendTransactionOption } from "../interfaces/wallet.js";
 import type { DisconnectFn, SwitchChainFn } from "../types.js";
 import { getValidPublicRPCUrl } from "../utils/chains.js";
@@ -106,12 +113,12 @@ export async function connectEip1193Wallet({
   }
 
   return onConnect({
-    provider,
     address,
     chain: connectedChain,
-    emitter,
     client,
+    emitter,
     id,
+    provider,
   });
 }
 
@@ -153,12 +160,12 @@ export async function autoConnectEip1193Wallet({
     chain && chain.id === chainId ? chain : getCachedChain(chainId);
 
   return onConnect({
-    provider,
     address,
     chain: connectedChain,
-    emitter,
     client,
+    emitter,
     id,
+    provider,
   });
 }
 
@@ -191,13 +198,13 @@ function createAccount({
       const params = [
         {
           ...gasFees,
-          nonce: tx.nonce ? numberToHex(tx.nonce) : undefined,
           accessList: tx.accessList,
-          value: tx.value ? numberToHex(tx.value) : undefined,
-          gas: tx.gas ? numberToHex(tx.gas) : undefined,
-          from: this.address,
-          to: tx.to ? getAddress(tx.to) : undefined,
           data: tx.data,
+          from: this.address,
+          gas: tx.gas ? numberToHex(tx.gas) : undefined,
+          nonce: tx.nonce ? numberToHex(tx.nonce) : undefined,
+          to: tx.to ? getAddress(tx.to) : undefined,
+          value: tx.value ? numberToHex(tx.value) : undefined,
           ...tx.eip712,
         },
       ];
@@ -210,13 +217,13 @@ function createAccount({
         })) as Hex;
 
         trackTransaction({
-          client,
           chainId: tx.chainId,
-          walletAddress: getAddress(address),
-          walletType: id,
-          transactionHash,
+          client,
           contractAddress: tx.to ?? undefined,
           gasPrice: tx.gasPrice,
+          transactionHash,
+          walletAddress: getAddress(address),
+          walletType: id,
         });
 
         return {
@@ -226,12 +233,12 @@ function createAccount({
         // Track insufficient funds errors
         if (isInsufficientFundsError(error)) {
           trackInsufficientFundsError({
-            client,
-            error,
-            walletAddress: getAddress(address),
             chainId: tx.chainId,
+            client,
             contractAddress: tx.to || undefined,
+            error,
             transactionValue: tx.value,
+            walletAddress: getAddress(address),
           });
         }
 
@@ -298,6 +305,64 @@ function createAccount({
       );
       return result;
     },
+    async sendCalls(options) {
+      try {
+        const { callParams, chain } = await toProviderCallParams(
+          options,
+          account,
+        );
+        const callId = await provider.request({
+          method: "wallet_sendCalls",
+          params: callParams,
+        });
+        if (callId && typeof callId === "object" && "id" in callId) {
+          return { chain, client, id: callId.id };
+        }
+        return { chain, client, id: callId };
+      } catch (error) {
+        if (/unsupport|not support/i.test((error as Error).message)) {
+          throw new Error(
+            `${id} errored calling wallet_sendCalls, with error: ${error instanceof Error ? error.message : stringify(error)}`,
+          );
+        }
+        throw error;
+      }
+    },
+    async getCallsStatus(options) {
+      try {
+        const rawResponse = (await provider.request({
+          method: "wallet_getCallsStatus",
+          params: [options.id],
+        })) as GetCallsStatusRawResponse;
+        return toGetCallsStatusResponse(rawResponse);
+      } catch (error) {
+        if (/unsupport|not support/i.test((error as Error).message)) {
+          throw new Error(
+            `${id} does not support wallet_getCallsStatus, reach out to them directly to request EIP-5792 support.`,
+          );
+        }
+        throw error;
+      }
+    },
+    async getCapabilities(options) {
+      const chainId = options.chainId;
+      try {
+        const result = await provider.request({
+          method: "wallet_getCapabilities",
+          params: [getAddress(account.address)],
+        });
+        return toGetCapabilitiesResult(result, chainId);
+      } catch (error: unknown) {
+        if (
+          /unsupport|not support|not available/i.test((error as Error).message)
+        ) {
+          return {
+            message: `${id} does not support wallet_getCapabilities, reach out to them directly to request EIP-5792 support.`,
+          };
+        }
+        throw error;
+      }
+    },
   };
 
   return account;
@@ -322,7 +387,7 @@ async function onConnect({
   client: ThirdwebClient;
   id: WalletId | ({} & string);
 }): Promise<[Account, Chain, DisconnectFn, SwitchChainFn]> {
-  const account = createAccount({ provider, address, client, id });
+  const account = createAccount({ address, client, id, provider });
   async function disconnect() {
     provider.removeListener("accountsChanged", onAccountsChanged);
     provider.removeListener("chainChanged", onChainChanged);
@@ -337,10 +402,10 @@ async function onConnect({
   function onAccountsChanged(accounts: string[]) {
     if (accounts[0]) {
       const newAccount = createAccount({
-        provider,
         address: getAddress(accounts[0]),
         client,
         id,
+        provider,
       });
 
       emitter.emit("accountChanged", newAccount);
@@ -386,11 +451,11 @@ async function switchChain(provider: EIP1193Provider, chain: Chain) {
       method: "wallet_addEthereumChain",
       params: [
         {
+          blockExplorerUrls: apiChain.explorers?.map((x) => x.url),
           chainId: hexChainId,
           chainName: apiChain.name,
-          nativeCurrency: apiChain.nativeCurrency,
-          rpcUrls: getValidPublicRPCUrl(apiChain), // no client id on purpose here
-          blockExplorerUrls: apiChain.explorers?.map((x) => x.url),
+          nativeCurrency: apiChain.nativeCurrency, // no client id on purpose here
+          rpcUrls: getValidPublicRPCUrl(apiChain),
         },
       ],
     });

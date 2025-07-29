@@ -1,14 +1,14 @@
 "use client";
 import { useCustomTheme } from "../../../core/design-system/CustomThemeProvider.js";
 import {
-  type Theme,
   fontSize,
   radius,
   spacing,
+  type Theme,
 } from "../../../core/design-system/index.js";
 import { StyledButton } from "../design-system/elements.js";
 
-export type ButtonProps = {
+type ButtonProps = {
   variant: "primary" | "secondary" | "link" | "accent" | "outline" | "ghost";
   unstyled?: boolean;
   fullWidth?: boolean;
@@ -23,23 +23,22 @@ export const Button = /* @__PURE__ */ StyledButton((props: ButtonProps) => {
   }
   return {
     all: "unset",
-    cursor: "pointer",
-    display: "inline-flex",
+    "&:active": {
+      transform: "translateY(1px)",
+    },
+    "&[data-disabled='true']": {
+      "&:hover": {
+        borderColor: "transparent",
+      },
+      background: theme.colors.tertiaryBg,
+      borderColor: "transparent",
+      boxShadow: "none",
+      color: theme.colors.secondaryText,
+    },
+    "&[disabled]": {
+      cursor: "not-allowed",
+    },
     alignItems: "center",
-    justifyContent: "center",
-    borderRadius: radius.md,
-    padding: `${fontSize.sm} ${fontSize.sm}`,
-    fontSize: fontSize.sm,
-    fontWeight: 500,
-    boxSizing: "border-box",
-    WebkitTapHighlightColor: "transparent",
-    lineHeight: "normal",
-    flexShrink: 0,
-    transition: "border 200ms ease",
-    gap: (props.gap && spacing[props.gap]) || 0,
-    width: props.fullWidth ? "100%" : undefined,
-    textAlign: "center",
-    maxWidth: "100%",
     background: (() => {
       if (props.bg) {
         return theme.colors[props.bg];
@@ -55,6 +54,8 @@ export const Button = /* @__PURE__ */ StyledButton((props: ButtonProps) => {
           return "none";
       }
     })(),
+    borderRadius: radius.md,
+    boxSizing: "border-box",
     color: (() => {
       switch (props.variant) {
         case "primary":
@@ -72,40 +73,39 @@ export const Button = /* @__PURE__ */ StyledButton((props: ButtonProps) => {
           return theme.colors.primaryButtonText;
       }
     })(),
-    "&:active": {
-      transform: "translateY(1px)",
-    },
-    "&[disabled]": {
-      cursor: "not-allowed",
-    },
-    "&[data-disabled='true']": {
-      background: theme.colors.tertiaryBg,
-      color: theme.colors.secondaryText,
-      borderColor: "transparent",
-      boxShadow: "none",
-      "&:hover": {
-        borderColor: "transparent",
-      },
-    },
+    cursor: "pointer",
+    display: "inline-flex",
+    flexShrink: 0,
+    fontSize: fontSize.sm,
+    fontWeight: 500,
+    gap: (props.gap && spacing[props.gap]) || 0,
+    justifyContent: "center",
+    lineHeight: "normal",
+    maxWidth: "100%",
+    padding: `${fontSize.sm} ${fontSize.sm}`,
+    textAlign: "center",
+    transition: "border 200ms ease",
+    WebkitTapHighlightColor: "transparent",
+    width: props.fullWidth ? "100%" : undefined,
     ...(() => {
       if (props.variant === "outline") {
         return {
-          border: `1px solid ${theme.colors.borderColor}`,
           "&:hover": {
             borderColor: theme.colors.accentText,
           },
           '&[aria-selected="true"]': {
             borderColor: theme.colors.accentText,
           },
+          border: `1px solid ${theme.colors.borderColor}`,
         };
       }
 
       if (props.variant === "ghost") {
         return {
-          border: "1px solid transparent",
           "&:hover": {
             borderColor: theme.colors.accentText,
           },
+          border: "1px solid transparent",
         };
       }
 
@@ -127,10 +127,10 @@ export const Button = /* @__PURE__ */ StyledButton((props: ButtonProps) => {
 
       if (props.variant === "link") {
         return {
-          padding: 0,
           "&:hover": {
             color: theme.colors.primaryText,
           },
+          padding: 0,
         };
       }
 
@@ -145,15 +145,6 @@ export const IconButton = /* @__PURE__ */ StyledButton((_) => {
   const theme = useCustomTheme();
   return {
     all: "unset",
-    cursor: "pointer",
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: radius.sm,
-    WebkitTapHighlightColor: "transparent",
-    color: theme.colors.secondaryIconColor,
-    padding: "2px",
-    transition: "background 200ms ease, color 200ms ease",
     "&:hover": {
       background: theme.colors.secondaryIconHoverBg,
       color: theme.colors.secondaryIconHoverColor,
@@ -161,5 +152,14 @@ export const IconButton = /* @__PURE__ */ StyledButton((_) => {
     "&[disabled]": {
       cursor: "not-allowed",
     },
+    alignItems: "center",
+    borderRadius: radius.sm,
+    color: theme.colors.secondaryIconColor,
+    cursor: "pointer",
+    display: "inline-flex",
+    justifyContent: "center",
+    padding: "2px",
+    transition: "background 200ms ease, color 200ms ease",
+    WebkitTapHighlightColor: "transparent",
   };
 });

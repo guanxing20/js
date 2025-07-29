@@ -1,24 +1,33 @@
 "use client";
+import { useQuery } from "@tanstack/react-query";
 import type { Token } from "../../../../bridge/index.js";
 import type { ThirdwebClient } from "../../../../client/client.js";
+import { NATIVE_TOKEN_ADDRESS } from "../../../../constants/addresses.js";
 import {
   type Address,
   getAddress,
   shortenAddress,
 } from "../../../../utils/address.js";
+import { resolvePromisedValue } from "../../../../utils/promise/resolve-promised-value.js";
+import { getWalletBalance } from "../../../../wallets/utils/getWalletBalance.js";
 import { useCustomTheme } from "../../../core/design-system/CustomThemeProvider.js";
-import { fontSize, spacing } from "../../../core/design-system/index.js";
+import {
+  fontSize,
+  spacing,
+  type Theme,
+} from "../../../core/design-system/index.js";
 import { useChainMetadata } from "../../../core/hooks/others/useChainQuery.js";
 import { useTransactionDetails } from "../../../core/hooks/useTransactionDetails.js";
 import { useActiveAccount } from "../../../core/hooks/wallets/useActiveAccount.js";
+import { useActiveWallet } from "../../../core/hooks/wallets/useActiveWallet.js";
 import { ConnectButton } from "../ConnectWallet/ConnectButton.js";
 import { PoweredByThirdweb } from "../ConnectWallet/PoweredByTW.js";
-import type { PayEmbedConnectOptions } from "../PayEmbed.js";
-import { ChainName } from "../components/ChainName.js";
-import { Spacer } from "../components/Spacer.js";
 import { Container, Line } from "../components/basic.js";
 import { Button } from "../components/buttons.js";
+import { ChainName } from "../components/ChainName.js";
+import { Spacer } from "../components/Spacer.js";
 import { Text } from "../components/text.js";
+import type { PayEmbedConnectOptions } from "../PayEmbed.js";
 import type { UIOptions } from "./BridgeOrchestrator.js";
 import { ChainIcon } from "./common/TokenAndChain.js";
 import { WithHeader } from "./common/WithHeader.js";
@@ -43,6 +52,12 @@ export interface TransactionPaymentProps {
    * Connect options for wallet connection
    */
   connectOptions?: PayEmbedConnectOptions;
+
+  /**
+   * Whether to show thirdweb branding in the widget.
+   * @default true
+   */
+  showThirdwebBranding?: boolean;
 }
 
 export function TransactionPayment({
@@ -50,17 +65,45 @@ export function TransactionPayment({
   client,
   onContinue,
   connectOptions,
+  showThirdwebBranding = true,
 }: TransactionPaymentProps) {
   const theme = useCustomTheme();
   const activeAccount = useActiveAccount();
+  const wallet = useActiveWallet();
 
   // Get chain metadata for native currency symbol
   const chainMetadata = useChainMetadata(uiOptions.transaction.chain);
 
   // Use the extracted hook for transaction details
   const transactionDataQuery = useTransactionDetails({
-    transaction: uiOptions.transaction,
     client,
+    transaction: uiOptions.transaction,
+    wallet,
+  });
+
+  // We can't use useWalletBalance here because erc20Value is a possibly async value
+  const { data: userBalance } = useQuery({
+    enabled: !!activeAccount?.address,
+    queryFn: async (): Promise<string> => {
+      if (!activeAccount?.address) {
+        return "0";
+      }
+      const erc20Value = await resolvePromisedValue(
+        uiOptions.transaction.erc20Value,
+      );
+      const walletBalance = await getWalletBalance({
+        address: activeAccount?.address,
+        chain: uiOptions.transaction.chain,
+        tokenAddress:
+          erc20Value?.tokenAddress.toLowerCase() !== NATIVE_TOKEN_ADDRESS
+            ? erc20Value?.tokenAddress
+            : undefined,
+        client,
+      });
+
+      return walletBalance.displayValue;
+    },
+    queryKey: ["user-balance", activeAccount?.address],
   });
 
   const contractName =
@@ -71,74 +114,15 @@ export function TransactionPayment({
 
   const buttonLabel = `Execute ${functionName}`;
 
-  // Skeleton component for loading state
-  const SkeletonRow = ({ width = "100%" }: { width?: string }) => (
-    <Container
-      flex="row"
-      style={{
-        justifyContent: "space-between",
-        alignItems: "center",
-      }}
-    >
-      <div
-        style={{
-          width: "30%",
-          height: "16px",
-          backgroundColor: theme.colors.skeletonBg,
-          borderRadius: spacing.xs,
-        }}
-      />
-      <div
-        style={{
-          width,
-          height: "16px",
-          backgroundColor: theme.colors.skeletonBg,
-          borderRadius: spacing.xs,
-        }}
-      />
-    </Container>
-  );
-
-  const SkeletonHeader = () => (
-    <Container
-      flex="row"
-      center="y"
-      gap="3xs"
-      style={{
-        justifyContent: "space-between",
-      }}
-    >
-      {/* USD Value Skeleton */}
-      <div
-        style={{
-          width: "80px",
-          height: "32px",
-          backgroundColor: theme.colors.skeletonBg,
-          borderRadius: spacing.xs,
-        }}
-      />
-
-      {/* Function Name Skeleton */}
-      <div
-        style={{
-          width: "120px",
-          height: "24px",
-          backgroundColor: theme.colors.skeletonBg,
-          borderRadius: spacing.sm,
-        }}
-      />
-    </Container>
-  );
-
   if (isLoading) {
     return (
       <WithHeader
-        uiOptions={uiOptions}
-        defaultTitle="Transaction"
         client={client}
+        defaultTitle="Transaction"
+        uiOptions={uiOptions}
       >
         {/* Loading Header */}
-        <SkeletonHeader />
+        <SkeletonHeader theme={theme} />
 
         <Spacer y="md" />
 
@@ -147,15 +131,15 @@ export function TransactionPayment({
         <Spacer y="md" />
 
         {/* Loading Rows */}
-        <SkeletonRow width="60%" />
+        <SkeletonRow theme={theme} width="60%" />
         <Spacer y="xs" />
-        <SkeletonRow width="40%" />
+        <SkeletonRow theme={theme} width="40%" />
         <Spacer y="xs" />
-        <SkeletonRow width="50%" />
+        <SkeletonRow theme={theme} width="50%" />
         <Spacer y="xs" />
-        <SkeletonRow width="45%" />
+        <SkeletonRow theme={theme} width="45%" />
         <Spacer y="xs" />
-        <SkeletonRow width="55%" />
+        <SkeletonRow theme={theme} width="55%" />
 
         <Spacer y="md" />
 
@@ -166,52 +150,55 @@ export function TransactionPayment({
         {/* Loading Button */}
         <div
           style={{
-            width: "100%",
-            height: "48px",
             backgroundColor: theme.colors.skeletonBg,
             borderRadius: spacing.md,
+            height: "48px",
+            width: "100%",
           }}
         />
 
-        <Spacer y="md" />
-
-        <PoweredByThirdweb />
-        <Spacer y="md" />
+        {showThirdwebBranding ? (
+          <div>
+            <Spacer y="md" />
+            <PoweredByThirdweb />
+            <Spacer y="md" />
+          </div>
+        ) : null}
       </WithHeader>
     );
   }
 
   return (
     <WithHeader
-      uiOptions={uiOptions}
-      defaultTitle="Transaction"
       client={client}
+      defaultTitle="Transaction"
+      uiOptions={uiOptions}
     >
       {/* Cost and Function Name section */}
       <Container
-        flex="row"
         center="y"
+        flex="row"
         gap="3xs"
         style={{
           justifyContent: "space-between",
         }}
       >
         {/* USD Value */}
-        <Text size="xl" color="primaryText" weight={700}>
+        <Text color="primaryText" size="xl" weight={700}>
           {transactionDataQuery.data?.usdValueDisplay ||
             transactionDataQuery.data?.txCostDisplay}
         </Text>
 
         {/* Function Name */}
         <Text
-          size="md"
           color="secondaryText"
+          size="md"
           style={{
-            fontFamily: "monospace",
-            textAlign: "right",
             backgroundColor: theme.colors.tertiaryBg,
-            padding: `${spacing.xs} ${spacing.sm}`,
             borderRadius: spacing.sm,
+            fontFamily: "monospace",
+            padding: `${spacing.xs} ${spacing.sm}`,
+            textAlign: "right",
           }}
         >
           {functionName}
@@ -225,44 +212,50 @@ export function TransactionPayment({
       <Spacer y="md" />
 
       {/* Contract Info */}
-      <Container
-        flex="row"
-        style={{
-          justifyContent: "space-between",
-          alignItems: "center",
-        }}
-      >
-        <Text size="sm" color="secondaryText">
-          Contract
-        </Text>
-        <Text size="sm" color="primaryText">
-          {contractName}
-        </Text>
-      </Container>
+      {contractName !== "UnknownContract" &&
+        contractName !== undefined &&
+        contractName !== "Unknown Contract" && (
+          <>
+            <Container
+              flex="row"
+              style={{
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
+              <Text color="secondaryText" size="sm">
+                Contract
+              </Text>
+              <Text color="primaryText" size="sm">
+                {contractName}
+              </Text>
+            </Container>
 
-      <Spacer y="xs" />
+            <Spacer y="xs" />
+          </>
+        )}
 
       {/* Address */}
       <Container
         flex="row"
         style={{
-          justifyContent: "space-between",
           alignItems: "center",
+          justifyContent: "space-between",
         }}
       >
-        <Text size="sm" color="secondaryText">
+        <Text color="secondaryText" size="sm">
           Address
         </Text>
         <a
           href={`https://thirdweb.com/${uiOptions.transaction.chain.id}/${uiOptions.transaction.to}`}
-          target="_blank"
           rel="noopener noreferrer"
           style={{
             color: theme.colors.accentText,
-            textDecoration: "none",
             fontFamily: "monospace",
             fontSize: fontSize.sm,
+            textDecoration: "none",
           }}
+          target="_blank"
         >
           {shortenAddress(uiOptions.transaction.to as string)}
         </a>
@@ -274,25 +267,25 @@ export function TransactionPayment({
       <Container
         flex="row"
         style={{
-          justifyContent: "space-between",
           alignItems: "center",
+          justifyContent: "space-between",
         }}
       >
-        <Text size="sm" color="secondaryText">
+        <Text color="secondaryText" size="sm">
           Network
         </Text>
-        <Container flex="row" gap="3xs" center="y">
+        <Container center="y" flex="row" gap="3xs">
           <ChainIcon
             chain={uiOptions.transaction.chain}
-            size="xs"
             client={client}
+            size="xs"
           />
           <ChainName
             chain={uiOptions.transaction.chain}
             client={client}
-            size="sm"
             color="primaryText"
             short
+            size="sm"
             style={{
               fontFamily: "monospace",
             }}
@@ -308,16 +301,16 @@ export function TransactionPayment({
           <Container
             flex="row"
             style={{
-              justifyContent: "space-between",
               alignItems: "center",
+              justifyContent: "space-between",
             }}
           >
-            <Text size="sm" color="secondaryText">
+            <Text color="secondaryText" size="sm">
               Cost
             </Text>
             <Text
-              size="sm"
               color="primaryText"
+              size="sm"
               style={{
                 fontFamily: "monospace",
               }}
@@ -336,16 +329,16 @@ export function TransactionPayment({
           <Container
             flex="row"
             style={{
-              justifyContent: "space-between",
               alignItems: "center",
+              justifyContent: "space-between",
             }}
           >
-            <Text size="sm" color="secondaryText">
+            <Text color="secondaryText" size="sm">
               Network fees
             </Text>
             <Text
-              size="sm"
               color="primaryText"
+              size="sm"
               style={{
                 fontFamily: "monospace",
               }}
@@ -365,10 +358,27 @@ export function TransactionPayment({
       {/* Action Button */}
       {activeAccount ? (
         <Button
-          variant="primary"
           fullWidth
           onClick={() => {
             if (transactionDataQuery.data?.tokenInfo) {
+              if (
+                userBalance &&
+                Number(userBalance) <
+                  Number(transactionDataQuery.data.totalCost)
+              ) {
+                // if user has funds, but not enough, we need to fund the wallet with the difference
+                onContinue(
+                  (
+                    Number(transactionDataQuery.data.totalCost) -
+                    Number(userBalance)
+                  ).toString(),
+                  transactionDataQuery.data.tokenInfo,
+                  getAddress(activeAccount.address),
+                );
+                return;
+              }
+
+              // otherwise, use the full transaction cost
               onContinue(
                 transactionDataQuery.data.totalCost,
                 transactionDataQuery.data.tokenInfo,
@@ -377,27 +387,96 @@ export function TransactionPayment({
             }
           }}
           style={{
-            padding: `${spacing.sm} ${spacing.md}`,
             fontSize: fontSize.md,
+            padding: `${spacing.sm} ${spacing.md}`,
           }}
+          variant="primary"
         >
           {buttonLabel}
         </Button>
       ) : (
         <ConnectButton
           client={client}
-          theme={theme}
           connectButton={{
             label: buttonLabel,
           }}
+          theme={theme}
           {...connectOptions}
         />
       )}
 
-      <Spacer y="md" />
-
-      <PoweredByThirdweb />
+      {showThirdwebBranding ? (
+        <div>
+          <Spacer y="md" />
+          <PoweredByThirdweb />
+        </div>
+      ) : null}
       <Spacer y="lg" />
     </WithHeader>
   );
 }
+
+const SkeletonHeader = (props: { theme: Theme }) => (
+  <Container
+    center="y"
+    flex="row"
+    gap="3xs"
+    style={{
+      justifyContent: "space-between",
+    }}
+  >
+    {/* USD Value Skeleton */}
+    <div
+      style={{
+        backgroundColor: props.theme.colors.skeletonBg,
+        borderRadius: spacing.xs,
+        height: "32px",
+        width: "80px",
+      }}
+    />
+
+    {/* Function Name Skeleton */}
+    <div
+      style={{
+        backgroundColor: props.theme.colors.skeletonBg,
+        borderRadius: spacing.sm,
+        height: "24px",
+        width: "120px",
+      }}
+    />
+  </Container>
+);
+
+// Skeleton component for loading state
+const SkeletonRow = ({
+  width = "100%",
+  theme,
+}: {
+  width?: string;
+  theme: Theme;
+}) => (
+  <Container
+    flex="row"
+    style={{
+      alignItems: "center",
+      justifyContent: "space-between",
+    }}
+  >
+    <div
+      style={{
+        backgroundColor: theme.colors.skeletonBg,
+        borderRadius: spacing.xs,
+        height: "16px",
+        width: "30%",
+      }}
+    />
+    <div
+      style={{
+        backgroundColor: theme.colors.skeletonBg,
+        borderRadius: spacing.xs,
+        height: "16px",
+        width,
+      }}
+    />
+  </Container>
+);

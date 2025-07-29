@@ -1,9 +1,10 @@
 "use client";
 
-import { cn } from "@/lib/utils";
+import { BookOpenTextIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { cn } from "@/lib/utils";
 
 /**
  * Automatically query all the heading anchors inside the <main> and creates a table of contents
@@ -101,9 +102,9 @@ export function TableOfContentsSideBar(props: {
       }
 
       anchorNodes.push({
-        name: heading?.textContent || "",
         href: anchorEl.getAttribute("href") || "",
         level: Number.parseInt(heading?.tagName.slice(1) || "6"),
+        name: heading?.textContent || "",
       });
     }
 
@@ -116,22 +117,28 @@ export function TableOfContentsSideBar(props: {
   return (
     <nav
       className={cn(
-        "hrink-0 hidden pt-6 text-sm xl:block",
+        "shrink-0 hidden pt-6 text-sm xl:block",
         "styled-scrollbar sticky top-sticky-top-height h-sidebar-height flex-col overflow-y-auto",
       )}
       style={{
         visibility: hideNav ? "hidden" : "visible",
       }}
     >
-      <div className="mb-5 font-semibold text-base">On this page</div>
-      <div
-        ref={tocRef}
-        style={{
-          opacity: nodes.length > 0 ? 1 : 0,
-          transition: "opacity 0.5s ease",
-        }}
-      >
-        <TableOfContents nodes={nodes} linkClassName={props.linkClassName} />
+      <div className="bg-card text-sm p-4 border rounded-lg shadow-sm">
+        <div className="font-medium flex items-center">
+          <BookOpenTextIcon className="mr-2 size-4" />
+          On this page
+        </div>
+        <hr className="my-4 border-t" />
+        <div
+          ref={tocRef}
+          style={{
+            opacity: nodes.length > 0 ? 1 : 0,
+            transition: "opacity 0.5s ease",
+          }}
+        >
+          <TableOfContents linkClassName={props.linkClassName} nodes={nodes} />
+        </div>
       </div>
     </nav>
   );
@@ -147,9 +154,9 @@ function TableOfContents(props: {
         if (node.children.length > 0) {
           return (
             <li key={node.href}>
-              <TOCLink name={node.name} href={node.href} />
+              <TOCLink href={node.href} name={node.name} />
               <div className="pt-3 pl-3">
-                <TableOfContents nodes={node.children} key={node.href} />
+                <TableOfContents key={node.href} nodes={node.children} />
               </div>
             </li>
           );
@@ -158,9 +165,9 @@ function TableOfContents(props: {
         return (
           <li key={node.href}>
             <TOCLink
-              name={node.name}
               href={node.href}
               linkClassName={props.linkClassName}
+              name={node.name}
             />
           </li>
         );

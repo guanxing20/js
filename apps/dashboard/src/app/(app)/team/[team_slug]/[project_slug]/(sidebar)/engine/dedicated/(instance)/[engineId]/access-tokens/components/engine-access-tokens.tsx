@@ -1,16 +1,16 @@
 "use client";
 
+import { useState } from "react";
+import type { ThirdwebClient } from "thirdweb";
 import { CodeClient } from "@/components/ui/code/code.client";
 import { InlineCode } from "@/components/ui/inline-code";
+import { TabButtons } from "@/components/ui/tabs";
+import { UnderlineLink } from "@/components/ui/UnderlineLink";
 import {
   useEngineAccessTokens,
   useEngineKeypairs,
   useHasEngineFeature,
-} from "@3rdweb-sdk/react/hooks/useEngine";
-import { ButtonGroup, Flex } from "@chakra-ui/react";
-import { useState } from "react";
-import type { ThirdwebClient } from "thirdweb";
-import { Button, Heading, Link, Text } from "tw-components";
+} from "@/hooks/useEngine";
 import { AccessTokensTable } from "./access-tokens-table";
 import { AddAccessTokenButton } from "./add-access-token-button";
 import { AddKeypairButton } from "./add-keypair-button";
@@ -36,53 +36,43 @@ export const EngineAccessTokens: React.FC<EngineAccessTokensProps> = ({
   );
 
   return (
-    <Flex flexDir="column" gap={4}>
-      <Flex flexDir="column" gap={2}>
-        <Heading size="title.md">Access Tokens</Heading>
-      </Flex>
+    <div>
+      <h2 className="text-2xl font-semibold tracking-tight mb-1">
+        Access Tokens
+      </h2>
 
       {supportsKeyPairAuth && (
-        <ButtonGroup size="sm" variant="ghost" spacing={2}>
-          <Button
-            type="button"
-            isActive={selected === "standard"}
-            _active={{
-              bg: "bgBlack",
-              color: "bgWhite",
-            }}
-            rounded="lg"
-            onClick={() => setSelected("standard")}
-          >
-            Standard
-          </Button>
-          <Button
-            type="button"
-            isActive={selected === "keypair"}
-            _active={{
-              bg: "bgBlack",
-              color: "bgWhite",
-            }}
-            rounded="lg"
-            onClick={() => setSelected("keypair")}
-          >
-            Keypair Authentication
-          </Button>
-        </ButtonGroup>
+        <TabButtons
+          containerClassName="mb-4 mt-3"
+          tabClassName="!text-sm"
+          tabs={[
+            {
+              name: "Standard",
+              onClick: () => setSelected("standard"),
+              isActive: selected === "standard",
+            },
+            {
+              name: "Keypair Authentication",
+              onClick: () => setSelected("keypair"),
+              isActive: selected === "keypair",
+            },
+          ]}
+        />
       )}
 
       {selected === "standard" ? (
         <StandardAccessTokensPanel
-          instanceUrl={instanceUrl}
           authToken={authToken}
           client={client}
+          instanceUrl={instanceUrl}
         />
       ) : selected === "keypair" ? (
         <KeypairAuthenticationPanel
-          instanceUrl={instanceUrl}
           authToken={authToken}
+          instanceUrl={instanceUrl}
         />
       ) : null}
-    </Flex>
+    </div>
   );
 };
 
@@ -96,49 +86,54 @@ const StandardAccessTokensPanel = ({
   authToken: string;
 }) => {
   const accessTokens = useEngineAccessTokens({
-    instanceUrl,
     authToken,
+    instanceUrl,
   });
 
   return (
-    <>
-      <Text>
+    <div>
+      <p className="text-sm text-muted-foreground mb-4">
         Access tokens allow API access to Engine.{" "}
-        <Link
+        <UnderlineLink
           href="https://portal.thirdweb.com/engine/features/access-tokens"
-          color="primary.500"
-          isExternal
+          target="_blank"
         >
           Learn more about access tokens
-        </Link>
-        .
-      </Text>
+        </UnderlineLink>
+      </p>
 
       <AccessTokensTable
+        accessTokens={accessTokens.data ?? []}
+        authToken={authToken}
         client={client}
         instanceUrl={instanceUrl}
-        accessTokens={accessTokens.data ?? []}
-        isPending={accessTokens.isPending}
         isFetched={accessTokens.isFetched}
-        authToken={authToken}
+        isPending={accessTokens.isPending}
       />
-      <AddAccessTokenButton instanceUrl={instanceUrl} authToken={authToken} />
 
-      <Flex direction="column" gap={2} mt={16}>
-        <Heading size="title.md">Authenticate with your access token</Heading>
-        <Text>
-          Set the <InlineCode code="authorization" /> header.
-        </Text>
+      <div className="flex justify-end mt-4">
+        <AddAccessTokenButton authToken={authToken} instanceUrl={instanceUrl} />
+      </div>
+
+      <div className="mt-16">
+        <div className="mb-3">
+          <h3 className="text-lg font-semibold mb-1">
+            Authenticate with your access token
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            Set the <InlineCode code="authorization" /> header.
+          </p>
+        </div>
         <CodeClient
-          lang="ts"
           code={`const resp = fetch("<engine_url>/backend-wallet/get-all", {
   headers: {
     authorization: "Bearer <access_token>",
   },
 });`}
+          lang="ts"
         />
-      </Flex>
-    </>
+      </div>
+    </div>
   );
 };
 
@@ -150,44 +145,47 @@ const KeypairAuthenticationPanel = ({
   authToken: string;
 }) => {
   const keypairs = useEngineKeypairs({
-    instanceUrl,
     authToken,
+    instanceUrl,
   });
 
   return (
     <>
-      <Text>
+      <p className="text-sm text-muted-foreground mb-4">
         Keypair authentication allows your app to generate short-lived access
         tokens.
         <br />
         They are securely signed by your backend and verified with a public key.{" "}
-        <Link
+        <UnderlineLink
           href="https://portal.thirdweb.com/engine/features/keypair-authentication"
-          color="primary.500"
-          isExternal
+          target="_blank"
         >
           Learn more about keypair authentication
-        </Link>
+        </UnderlineLink>
         .
-      </Text>
+      </p>
 
       <KeypairsTable
-        instanceUrl={instanceUrl}
-        keypairs={keypairs.data || []}
-        isPending={keypairs.isPending}
-        isFetched={keypairs.isFetched}
         authToken={authToken}
+        instanceUrl={instanceUrl}
+        isFetched={keypairs.isFetched}
+        isPending={keypairs.isPending}
+        keypairs={keypairs.data || []}
       />
-      <AddKeypairButton instanceUrl={instanceUrl} authToken={authToken} />
 
-      <Flex direction="column" gap={2} mt={16}>
-        <Heading size="title.md">Authenticate with your access token</Heading>
+      <div className="flex justify-end mt-4">
+        <AddKeypairButton authToken={authToken} instanceUrl={instanceUrl} />
+      </div>
 
-        <Text>
+      <div className="flex flex-col gap-2 mt-16">
+        <h3 className="text-lg font-medium">
+          Authenticate with your access token
+        </h3>
+
+        <p className="text-sm text-muted-foreground">
           Set the <InlineCode code="authorization" /> header.
-        </Text>
+        </p>
         <CodeClient
-          lang="ts"
           code={`import jsonwebtoken from "jsonwebtoken";
 
 // Generate an access token.
@@ -205,8 +203,9 @@ const resp = fetch("<engine_url>/backend-wallet/get-all", {
     authorization: \`Bearer \${restrictedAccessToken}\`,
   },
 });`}
+          lang="ts"
         />
-      </Flex>
+      </div>
     </>
   );
 };

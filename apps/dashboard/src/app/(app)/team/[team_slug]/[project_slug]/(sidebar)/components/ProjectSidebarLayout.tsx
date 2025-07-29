@@ -1,109 +1,160 @@
 "use client";
-import { FullWidthSidebarLayout } from "@/components/blocks/SidebarLayout";
-import { Badge } from "@/components/ui/badge";
 import {
+  ArrowLeftRightIcon,
   BellIcon,
   BookTextIcon,
   BoxIcon,
   CoinsIcon,
   HomeIcon,
+  LockIcon,
+  RssIcon,
   SettingsIcon,
   WalletIcon,
 } from "lucide-react";
-import { ContractIcon } from "../../../../../(dashboard)/(chain)/components/server/icons/ContractIcon";
-import { EngineIcon } from "../../../../../(dashboard)/(chain)/components/server/icons/EngineIcon";
-import { InsightIcon } from "../../../../../(dashboard)/(chain)/components/server/icons/InsightIcon";
-import { NebulaIcon } from "../../../../../(dashboard)/(chain)/components/server/icons/NebulaIcon";
-import { PayIcon } from "../../../../../(dashboard)/(chain)/components/server/icons/PayIcon";
-import { SmartAccountIcon } from "../../../../../(dashboard)/(chain)/components/server/icons/SmartAccountIcon";
+import { FullWidthSidebarLayout } from "@/components/blocks/full-width-sidebar-layout";
+import { Badge } from "@/components/ui/badge";
+import { ContractIcon } from "@/icons/ContractIcon";
+import { InsightIcon } from "@/icons/InsightIcon";
+import { PayIcon } from "@/icons/PayIcon";
+import { SmartAccountIcon } from "@/icons/SmartAccountIcon";
 
 export function ProjectSidebarLayout(props: {
   layoutPath: string;
+  engineLinkType: "cloud" | "dedicated";
   children: React.ReactNode;
+  isCentralizedWebhooksFeatureFlagEnabled: boolean;
 }) {
-  const { layoutPath, children } = props;
+  const {
+    layoutPath,
+    engineLinkType,
+    children,
+    isCentralizedWebhooksFeatureFlagEnabled,
+  } = props;
 
   return (
     <FullWidthSidebarLayout
       contentSidebarLinks={[
         {
-          href: layoutPath,
           exactMatch: true,
-          label: "Overview",
+          href: layoutPath,
           icon: HomeIcon,
+          label: "Overview",
         },
         {
-          label: "In-App Wallets",
-          href: `${layoutPath}/connect/in-app-wallets`,
-          icon: WalletIcon,
+          separator: true,
         },
         {
-          label: "Account Abstraction",
-          href: `${layoutPath}/connect/account-abstraction`,
-          icon: SmartAccountIcon,
+          group: "Build",
+          links: [
+            {
+              href: `${layoutPath}/wallets`,
+              icon: WalletIcon,
+              label: "Wallets",
+            },
+            {
+              href:
+                engineLinkType === "cloud"
+                  ? `${layoutPath}/transactions`
+                  : `${layoutPath}/engine/dedicated`,
+              icon: ArrowLeftRightIcon,
+              isActive: (pathname) => {
+                return (
+                  pathname.startsWith(`${layoutPath}/transactions`) ||
+                  pathname.startsWith(`${layoutPath}/engine/dedicated`)
+                );
+              },
+              label: "Transactions",
+            },
+            {
+              href: `${layoutPath}/contracts`,
+              icon: ContractIcon,
+              label: "Contracts",
+            },
+          ],
         },
         {
-          href: `${layoutPath}/connect/universal-bridge`,
-          icon: PayIcon,
-          label: "Universal Bridge",
+          separator: true,
         },
         {
-          href: `${layoutPath}/contracts`,
-          label: "Contracts",
-          icon: ContractIcon,
+          group: "Monetize",
+          links: [
+            {
+              href: `${layoutPath}/payments`,
+              icon: PayIcon,
+              label: "Payments",
+            },
+            {
+              href: `${layoutPath}/tokens`,
+              icon: CoinsIcon,
+              label: (
+                <span className="flex items-center gap-2">
+                  Tokens <Badge>New</Badge>
+                </span>
+              ),
+            },
+          ],
         },
         {
-          href: `${layoutPath}/assets`,
-          label: (
-            <span className="flex items-center gap-2">
-              Assets <Badge>New</Badge>
-            </span>
-          ),
-          icon: CoinsIcon,
+          separator: true,
         },
         {
-          href: `${layoutPath}/engine`,
-          label: "Engine",
-          icon: EngineIcon,
+          group: "Scale",
+          links: [
+            {
+              href: `${layoutPath}/insight`,
+              icon: InsightIcon,
+              label: "Insight",
+            },
+            {
+              href: `${layoutPath}/account-abstraction`,
+              icon: SmartAccountIcon,
+              label: "Account Abstraction",
+            },
+            {
+              href: `${layoutPath}/rpc`,
+              icon: RssIcon,
+              label: "RPC",
+            },
+            {
+              href: `${layoutPath}/vault`,
+              icon: LockIcon,
+              label: "Vault",
+            },
+          ],
         },
+      ]}
+      footerSidebarLinks={[
         {
-          href: `${layoutPath}/insight`,
-          label: "Insight",
-          icon: InsightIcon,
-        },
-        {
-          href: `${layoutPath}/nebula`,
-          label: "Nebula",
-          icon: NebulaIcon,
-        },
-        {
-          href: `${layoutPath}/webhooks`,
+          href: isCentralizedWebhooksFeatureFlagEnabled
+            ? `${layoutPath}/webhooks`
+            : `${layoutPath}/webhooks/contracts`,
+          icon: BellIcon,
+          isActive: (pathname) => {
+            return pathname.startsWith(`${layoutPath}/webhooks`);
+          },
           label: (
             <span className="flex items-center gap-2">
               Webhooks <Badge>New</Badge>
             </span>
           ),
-          icon: BellIcon,
         },
-      ]}
-      footerSidebarLinks={[
         {
           href: `${layoutPath}/settings`,
-          label: "Project Settings",
           icon: SettingsIcon,
+          label: "Project Settings",
         },
         {
           separator: true,
         },
         {
           href: "https://portal.thirdweb.com",
-          label: "Documentation",
           icon: BookTextIcon,
+          label: "Documentation",
         },
         {
           href: "https://playground.thirdweb.com/connect/sign-in/button",
-          label: "Playground",
           icon: BoxIcon,
+          label: "Playground",
         },
       ]}
     >

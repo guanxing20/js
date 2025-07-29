@@ -1,7 +1,7 @@
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import { UploadIcon, XIcon } from "lucide-react";
 import { useDropzone } from "react-dropzone";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 export function DropZone(props: {
   isError: boolean;
@@ -26,7 +26,7 @@ export function DropZone(props: {
   return (
     <div
       className={cn(
-        "flex cursor-pointer items-center justify-center rounded-md border border-dashed bg-card py-10 hover:border-active-border",
+        "flex cursor-pointer items-center justify-center rounded-md border border-dashed bg-card py-10 hover:border-active-border px-4",
         props.isError &&
           "border-red-500 bg-red-200/30 text-red-500 hover:border-red-600 dark:border-red-900 dark:bg-red-900/30 dark:hover:border-red-800",
         props.className,
@@ -64,11 +64,11 @@ export function DropZone(props: {
             {resetButton && (
               <Button
                 className="relative z-50 mt-4"
-                size="sm"
                 onClick={(e) => {
                   e.stopPropagation();
                   resetButton.onClick();
                 }}
+                size="sm"
               >
                 {resetButton.label}
               </Button>

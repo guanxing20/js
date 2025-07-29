@@ -1,19 +1,19 @@
 "use client";
 import { ThemeProvider } from "next-themes";
-import { Toaster } from "sonner";
 import { ThirdwebProvider } from "thirdweb/react";
+import { Toaster } from "@/components/ui/sonner";
 
 export function BridgeProviders({ children }: { children: React.ReactNode }) {
   return (
     <ThirdwebProvider>
       <ThemeProvider
         attribute="class"
+        defaultTheme="dark"
         disableTransitionOnChange
         enableSystem={false}
-        defaultTheme="dark"
       >
         {children}
-        <Toaster richColors theme="dark" />
+        <Toaster richColors />
       </ThemeProvider>
     </ThirdwebProvider>
   );

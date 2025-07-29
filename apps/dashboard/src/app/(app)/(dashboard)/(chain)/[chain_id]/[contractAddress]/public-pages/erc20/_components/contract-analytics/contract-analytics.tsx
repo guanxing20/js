@@ -1,8 +1,7 @@
 "use client";
 
-import { ThirdwebAreaChart } from "@/components/blocks/charts/area-chart";
-import {} from "data/analytics/hooks";
 import { useState } from "react";
+import { ThirdwebAreaChart } from "@/components/blocks/charts/area-chart";
 import {
   toolTipLabelFormatterWithPrecision,
   useContractAnalyticsOverview,
@@ -25,43 +24,43 @@ export function ContractAnalyticsOverview(props: {
   const { data, precision, isPending } = useContractAnalyticsOverview({
     chainId: props.chainId,
     contractAddress: props.contractAddress,
-    startDate,
     endDate,
+    startDate,
   });
 
   return (
-    <div>
-      <div className="flex flex-col">
-        <h2 className="font-semibold text-xl tracking-tight">Analytics</h2>
-        <p className="mb-3 text-muted-foreground text-sm">
-          View trends in unique wallets, transactions, and events over time for
-          this contract
-        </p>
-      </div>
-      <ThirdwebAreaChart
-        className="border-none bg-background p-0"
-        cardContentClassName="p-0"
-        config={{
-          wallets: {
-            label: "Unique Wallets",
-            color: "hsl(var(--chart-1))",
-          },
-          transactions: {
-            label: "Transactions",
-            color: "hsl(var(--chart-2))",
-          },
-          events: {
-            label: "Events",
-            color: "hsl(var(--chart-3))",
-          },
-        }}
-        data={data || []}
-        isPending={isPending}
-        showLegend
-        hideLabel={false}
-        chartClassName="aspect-[1.5] lg:aspect-[3]"
-        toolTipLabelFormatter={toolTipLabelFormatterWithPrecision(precision)}
-      />
-    </div>
+    <ThirdwebAreaChart
+      chartClassName="aspect-[1.2] lg:aspect-[3]"
+      cardContentClassName="px-0 pb-0"
+      margin={{
+        bottom: 20,
+      }}
+      header={{
+        headerClassName: "p-4 lg:p-6",
+        title: "Analytics",
+        titleClassName: "font-semibold text-2xl mb-0.5 tracking-tight",
+        description:
+          "View trends of transactions, events and unique wallets interacting with this contract over time",
+      }}
+      config={{
+        events: {
+          color: "hsl(var(--chart-5))",
+          label: "Events",
+        },
+        transactions: {
+          color: "hsl(var(--chart-8))",
+          label: "Transactions",
+        },
+        wallets: {
+          color: "hsl(var(--chart-1))",
+          label: "Unique Wallets",
+        },
+      }}
+      data={data || []}
+      hideLabel={false}
+      isPending={isPending}
+      showLegend
+      toolTipLabelFormatter={toolTipLabelFormatterWithPrecision(precision)}
+    />
   );
 }

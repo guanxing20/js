@@ -1,27 +1,27 @@
-import { PlainTextCodeBlock } from "@/components/ui/code/plaintext-code";
-import {
-  type KeypairAlgorithm,
-  useEngineAddKeypair,
-} from "@3rdweb-sdk/react/hooks/useEngine";
-import {
-  Alert,
-  Flex,
-  FormControl,
-  Input,
-  Modal,
-  ModalBody,
-  ModalContent,
-  ModalFooter,
-  ModalHeader,
-  ModalOverlay,
-  Select,
-  Textarea,
-  useDisclosure,
-} from "@chakra-ui/react";
-import { useTxNotifications } from "hooks/useTxNotifications";
-import { CirclePlusIcon } from "lucide-react";
+import { InfoIcon, PlusIcon } from "lucide-react";
 import { useState } from "react";
-import { Button, FormLabel, Text } from "tw-components";
+import { toast } from "sonner";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { CodeClient } from "@/components/ui/code/code.client";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Spinner } from "@/components/ui/Spinner/Spinner";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { type KeypairAlgorithm, useEngineAddKeypair } from "@/hooks/useEngine";
+import { parseError } from "@/utils/errorParser";
 
 const KEYPAIR_ALGORITHM_DETAILS: Record<
   KeypairAlgorithm,
@@ -37,13 +37,6 @@ const KEYPAIR_ALGORITHM_DETAILS: Record<
       "openssl ecparam -name prime256v1 -genkey -noout -out private.key",
     publicKeyInstructions: "openssl ec -in private.key -pubout -out public.key",
   },
-  RS256: {
-    name: "RSASSA-PKCS1-v1_5",
-    privateKeyInstructions:
-      "openssl genpkey -algorithm RSA -out private.key -pkeyopt rsa_keygen_bits:2048",
-    publicKeyInstructions:
-      "openssl rsa -pubout -in private.key -out public.key",
-  },
   PS256: {
     name: "RSASSA-PSS",
     privateKeyInstructions:
@@ -51,170 +44,171 @@ const KEYPAIR_ALGORITHM_DETAILS: Record<
     publicKeyInstructions:
       "openssl rsa -pubout -in private.key -out public.key",
   },
+  RS256: {
+    name: "RSASSA-PKCS1-v1_5",
+    privateKeyInstructions:
+      "openssl genpkey -algorithm RSA -out private.key -pkeyopt rsa_keygen_bits:2048",
+    publicKeyInstructions:
+      "openssl rsa -pubout -in private.key -out public.key",
+  },
 };
 
-interface AddKeypairButtonProps {
-  instanceUrl: string;
-  authToken: string;
-}
-
-export const AddKeypairButton: React.FC<AddKeypairButtonProps> = ({
+export function AddKeypairButton({
   instanceUrl,
   authToken,
-}) => {
-  const [publicKey, setPublicKey] = useState<string>("");
+}: {
+  instanceUrl: string;
+  authToken: string;
+}) {
+  const [publicKey, setPublicKey] = useState("");
   const [algorithm, setAlgorithm] = useState<KeypairAlgorithm>("ES256");
-  const [label, setLabel] = useState<string>("");
-  const { isOpen, onOpen, onClose } = useDisclosure();
-  const { mutateAsync: importKeypair } = useEngineAddKeypair({
-    instanceUrl,
+  const [label, setLabel] = useState("");
+  const [isOpen, setIsOpen] = useState(false);
+  const importKeypairMutation = useEngineAddKeypair({
     authToken,
+    instanceUrl,
   });
-
-  const { onSuccess, onError } = useTxNotifications(
-    "Public key added successfully.",
-    "Failed to add public key.",
-  );
 
   const onClick = async () => {
     try {
-      await importKeypair({
-        publicKey,
+      await importKeypairMutation.mutateAsync({
         algorithm,
         label,
+        publicKey,
       });
-
-      onSuccess();
-
+      toast.success("Public key added successfully.");
       setPublicKey("");
-      onClose();
+      setIsOpen(false);
     } catch (error) {
-      onError(error);
+      toast.error("Failed to add public key.", {
+        description: parseError(error),
+      });
       console.error(error);
     }
   };
 
   return (
     <>
-      <Button
-        onClick={onOpen}
-        variant="ghost"
-        size="sm"
-        leftIcon={<CirclePlusIcon className="size-6" />}
-        colorScheme="primary"
-        w="fit-content"
-      >
-        Add Public Key
+      <Button className="w-fit gap-2" onClick={() => setIsOpen(true)}>
+        <PlusIcon className="size-4" /> Add Public Key
       </Button>
 
-      <Modal
-        isOpen={isOpen}
-        onClose={onClose}
-        closeOnOverlayClick={false}
-        closeOnEsc={false}
-        isCentered
-        size="2xl"
-      >
-        <ModalOverlay />
-        <ModalContent className="!bg-background rounded-lg border border-border">
-          <ModalHeader>Add Public Key</ModalHeader>
-          <ModalBody as={Flex} flexDir="column" gap={8}>
-            <FormControl>
-              <div className="flex flex-col gap-2">
-                <div className="flex flex-row gap-2">
-                  <Text>Create a private key using:</Text>
-                  <Select
-                    w="fit-content"
-                    value={algorithm}
-                    onChange={(e) =>
-                      setAlgorithm(e.target.value as KeypairAlgorithm)
-                    }
-                    fontSize="small"
-                    size="sm"
-                    variant="unstyled"
-                    // fontWeight="bold"
-                    fontFamily="mono"
-                    color="primary.500"
-                    mt="-1px"
-                  >
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogContent className="!max-w-2xl p-0 gap-0 overflow-hidden">
+          <DialogHeader className="p-4 lg:p-6 border-b border-dashed">
+            <DialogTitle className="text-lg font-semibold">
+              Add Public Key
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-6 max-h-[600px] overflow-y-auto px-4 lg:px-6 pb-6 pt-4">
+            {/* instruction */}
+            <div className="space-y-2">
+              {/* create private key */}
+              <div className="space-y-2">
+                <span className="text-sm">Generate a public key</span>
+                <Select
+                  value={algorithm}
+                  onValueChange={(v) => setAlgorithm(v as KeypairAlgorithm)}
+                >
+                  <SelectTrigger className="bg-card">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent id="algorithm">
                     {(
                       Object.keys(
                         KEYPAIR_ALGORITHM_DETAILS,
                       ) as KeypairAlgorithm[]
                     ).map((key) => (
-                      <option key={key} value={key}>
+                      <SelectItem key={key} value={key}>
                         {key} ({KEYPAIR_ALGORITHM_DETAILS[key].name})
-                      </option>
+                      </SelectItem>
                     ))}
-                  </Select>
-                </div>
+                  </SelectContent>
+                </Select>
 
-                <PlainTextCodeBlock
-                  code={
-                    KEYPAIR_ALGORITHM_DETAILS[algorithm].privateKeyInstructions
-                  }
+                <CodeClient
+                  lang="bash"
+                  code={`\
+# create private key
+${KEYPAIR_ALGORITHM_DETAILS[algorithm].privateKeyInstructions}
+
+# extract public key
+${KEYPAIR_ALGORITHM_DETAILS[algorithm].publicKeyInstructions}
+
+# print public key
+cat public.key
+`}
                 />
-                <Text>Extract the public key.</Text>
-                <PlainTextCodeBlock
-                  code={
-                    KEYPAIR_ALGORITHM_DETAILS[algorithm].publicKeyInstructions
-                  }
-                />
-                <Text>Print the public key.</Text>
-                <PlainTextCodeBlock code="cat public.key" />
               </div>
-            </FormControl>
+            </div>
 
-            <FormControl isRequired>
-              <FormLabel>
-                Public Key ({KEYPAIR_ALGORITHM_DETAILS[algorithm].name})
-              </FormLabel>
+            {/* public key input */}
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-medium" htmlFor="publicKey">
+                Public Key ({KEYPAIR_ALGORITHM_DETAILS[algorithm].name}){" "}
+                <span className="text-destructive">*</span>
+              </label>
               <Textarea
-                fontFamily="mono"
+                id="publicKey"
+                className="font-mono bg-card"
+                rows={6}
+                placeholder={
+                  "-----BEGIN PUBLIC KEY-----\n...\n...\n...\n...\n-----END PUBLIC KEY-----"
+                }
                 value={publicKey}
                 onChange={(e) => setPublicKey(e.target.value)}
-                placeholder="-----BEGIN PUBLIC KEY-----\n...\n...\n...\n...\n-----END PUBLIC KEY-----"
-                rows={6}
-                fontSize="small"
+                required
               />
-            </FormControl>
+            </div>
 
-            <FormControl>
-              <FormLabel>Label</FormLabel>
+            {/* label */}
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-medium" htmlFor="key-label">
+                Label
+              </label>
               <Input
+                id="key-label"
+                placeholder="Enter a description for this keypair"
+                className="bg-card"
                 value={label}
                 onChange={(e) => setLabel(e.target.value)}
-                placeholder="Enter a description for this keypair"
               />
-            </FormControl>
+            </div>
 
-            <Alert variant="left-accent">
-              <div className="flex flex-col gap-2">
-                <Text>
-                  <strong>Keep your private key secure!</strong>
-                  <br />
-                  Your backend will sign access tokens with this private key
-                  which Engine verifies with this public key.
-                </Text>
-              </div>
+            {/* alert */}
+            <Alert variant="info">
+              <InfoIcon className="size-5" />
+              <AlertTitle>Keep your private key secure</AlertTitle>
+              <AlertDescription>
+                Your backend will sign access tokens with this private key which
+                Engine verifies with this public key.
+              </AlertDescription>
             </Alert>
-          </ModalBody>
+          </div>
 
-          <ModalFooter as={Flex} gap={3}>
-            <Button variant="ghost" onClick={onClose}>
+          <div className="flex justify-end gap-3 border-t p-4 lg:p-6 bg-card">
+            <Button
+              variant="outline"
+              onClick={() => setIsOpen(false)}
+              type="button"
+            >
               Cancel
             </Button>
             <Button
-              type="submit"
-              colorScheme="primary"
+              disabled={!publicKey}
               onClick={onClick}
-              isDisabled={!publicKey}
+              type="submit"
+              className="gap-2"
             >
+              {importKeypairMutation.isPending && (
+                <Spinner className="size-4" />
+              )}
               Add Public Key
             </Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
-};
+}

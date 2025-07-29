@@ -1,5 +1,29 @@
 # @thirdweb-dev/engine
 
+## 3.2.1
+
+### Patch Changes
+
+- [#7652](https://github.com/thirdweb-dev/js/pull/7652) [`620e294`](https://github.com/thirdweb-dev/js/commit/620e294f8ce59e8ec217e3984177ac6dd6d48772) Thanks [@joaquim-verges](https://github.com/joaquim-verges)! - Update to latest API
+
+## 3.2.0
+
+### Minor Changes
+
+- [#7427](https://github.com/thirdweb-dev/js/pull/7427) [`f9d7935`](https://github.com/thirdweb-dev/js/commit/f9d7935d848cbb2dea3f5204d5bff69cd0c3a921) Thanks [@joaquim-verges](https://github.com/joaquim-verges)! - New engine v3 APIs - see changelog for breaking changes
+
+## 3.1.0
+
+### Minor Changes
+
+- [#7431](https://github.com/thirdweb-dev/js/pull/7431) [`1387337`](https://github.com/thirdweb-dev/js/commit/1387337955a38f1527266b0a6146bb18d86426aa) Thanks [@PaoloRollo](https://github.com/PaoloRollo)! - update hey-api version to 0.76.0
+
+## 3.0.4
+
+### Patch Changes
+
+- [#7429](https://github.com/thirdweb-dev/js/pull/7429) [`ef2895f`](https://github.com/thirdweb-dev/js/commit/ef2895fa2c30b8b8b5250dadb05e3f5d125c9e4d) Thanks [@d4mr](https://github.com/d4mr)! - Support EOA Execution Options for Server Wallets
+
 ## 3.0.3
 
 ### Patch Changes

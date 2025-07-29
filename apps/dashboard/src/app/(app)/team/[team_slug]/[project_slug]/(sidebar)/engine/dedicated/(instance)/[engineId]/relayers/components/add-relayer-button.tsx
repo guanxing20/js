@@ -1,32 +1,55 @@
+import { zodResolver } from "@hookform/resolvers/zod";
+import { PlusIcon } from "lucide-react";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner";
+import type { ThirdwebClient } from "thirdweb";
+import { isAddress, shortenAddress } from "thirdweb/utils";
+import { z } from "zod";
 import { SingleNetworkSelector } from "@/components/blocks/NetworkSelectors";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Spinner } from "@/components/ui/Spinner/Spinner";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { useAllChainsData } from "@/hooks/chains/allChains";
 import {
   type CreateRelayerInput,
   useEngineBackendWallets,
   useEngineCreateRelayer,
-} from "@3rdweb-sdk/react/hooks/useEngine";
-import {
-  Flex,
-  FormControl,
-  Input,
-  Modal,
-  ModalBody,
-  ModalCloseButton,
-  ModalContent,
-  ModalFooter,
-  ModalHeader,
-  ModalOverlay,
-  Select,
-  Textarea,
-  type UseDisclosureReturn,
-  useDisclosure,
-} from "@chakra-ui/react";
-import { useAllChainsData } from "hooks/chains/allChains";
-import { useTxNotifications } from "hooks/useTxNotifications";
-import { CirclePlusIcon } from "lucide-react";
-import { useForm } from "react-hook-form";
-import type { ThirdwebClient } from "thirdweb";
-import { isAddress, shortenAddress } from "thirdweb/utils";
-import { Button, FormHelperText, FormLabel } from "tw-components";
+} from "@/hooks/useEngine";
+import { parseError } from "@/utils/errorParser";
+
+const addRelayerFormSchema = z.object({
+  chainId: z.number().min(1, "Chain is required"),
+  backendWalletAddress: z.string().min(1, "Backend wallet is required"),
+  name: z.string().optional(),
+  allowedContractsRaw: z.string().optional(),
+  allowedForwardersRaw: z.string().optional(),
+});
+
+type AddRelayerFormData = z.infer<typeof addRelayerFormSchema>;
 
 interface AddRelayerButtonProps {
   instanceUrl: string;
@@ -34,180 +57,232 @@ interface AddRelayerButtonProps {
   client: ThirdwebClient;
 }
 
-export const AddRelayerButton: React.FC<AddRelayerButtonProps> = ({
+export function AddRelayerButton({
   instanceUrl,
   authToken,
   client,
-}) => {
-  const disclosure = useDisclosure();
+}: AddRelayerButtonProps) {
+  const [isOpen, setIsOpen] = useState(false);
 
   return (
     <>
-      <Button
-        onClick={disclosure.onOpen}
-        variant="ghost"
-        size="sm"
-        leftIcon={<CirclePlusIcon className="size-6" />}
-        colorScheme="primary"
-        w="fit-content"
-      >
+      <Button onClick={() => setIsOpen(true)} className="w-fit gap-2">
+        <PlusIcon className="size-4" />
         Add Relayer
       </Button>
 
-      {disclosure.isOpen && (
-        <AddModal
-          instanceUrl={instanceUrl}
-          disclosure={disclosure}
-          authToken={authToken}
-          client={client}
-        />
-      )}
+      <Dialog onOpenChange={setIsOpen} open={isOpen}>
+        <DialogContent className="p-0 overflow-hidden">
+          <AddModalContent
+            authToken={authToken}
+            client={client}
+            instanceUrl={instanceUrl}
+            isOpen={isOpen}
+            setIsOpen={setIsOpen}
+          />
+        </DialogContent>
+      </Dialog>
     </>
   );
-};
-
-export interface AddModalInput {
-  chainId: number;
-  backendWalletAddress: string;
-  name?: string;
-  allowedContractsRaw: string;
-  allowedForwardersRaw: string;
 }
 
-const AddModal = ({
+function AddModalContent({
   instanceUrl,
-  disclosure,
+  setIsOpen,
   authToken,
   client,
 }: {
   instanceUrl: string;
-  disclosure: UseDisclosureReturn;
+  isOpen: boolean;
+  setIsOpen: (open: boolean) => void;
   authToken: string;
   client: ThirdwebClient;
-}) => {
-  const { mutate: createRelayer } = useEngineCreateRelayer({
-    instanceUrl,
+}) {
+  const { idToChain } = useAllChainsData();
+  const createRelayer = useEngineCreateRelayer({
     authToken,
+    instanceUrl,
   });
   const { data: backendWallets } = useEngineBackendWallets({
-    instanceUrl,
     authToken,
+    instanceUrl,
   });
-  const { idToChain } = useAllChainsData();
-  const { onSuccess, onError } = useTxNotifications(
-    "Relayer created successfully.",
-    "Failed to create relayer.",
-  );
 
-  const form = useForm<AddModalInput>({
+  const form = useForm<AddRelayerFormData>({
+    resolver: zodResolver(addRelayerFormSchema),
     defaultValues: {
       chainId: 11155111, // sepolia chain id
     },
   });
 
-  const onSubmit = (data: AddModalInput) => {
+  const onSubmit = (data: AddRelayerFormData) => {
     const createRelayerData: CreateRelayerInput = {
-      chain: idToChain.get(data.chainId)?.slug ?? "unknown",
+      allowedContracts: data.allowedContractsRaw
+        ? parseAddressListRaw(data.allowedContractsRaw)
+        : undefined,
+      allowedForwarders: data.allowedForwardersRaw
+        ? parseAddressListRaw(data.allowedForwardersRaw)
+        : undefined,
       backendWalletAddress: data.backendWalletAddress,
+      chain: idToChain.get(data.chainId)?.slug ?? "unknown",
       name: data.name,
-      allowedContracts: parseAddressListRaw(data.allowedContractsRaw),
-      allowedForwarders: parseAddressListRaw(data.allowedForwardersRaw),
     };
 
-    createRelayer(createRelayerData, {
-      onSuccess: () => {
-        onSuccess();
-        disclosure.onClose();
-      },
+    createRelayer.mutate(createRelayerData, {
       onError: (error) => {
-        onError(error);
+        toast.error("Failed to create relayer", {
+          description: parseError(error),
+        });
         console.error(error);
+      },
+      onSuccess: () => {
+        toast.success("Relayer created successfully");
+        setIsOpen(false);
       },
     });
   };
 
   return (
-    <Modal isOpen={disclosure.isOpen} onClose={disclosure.onClose} isCentered>
-      <ModalOverlay />
-      <ModalContent
-        className="!bg-background rounded-lg border border-border"
-        as="form"
-        onSubmit={form.handleSubmit(onSubmit)}
-      >
-        <ModalHeader>Add Relayer</ModalHeader>
-        <ModalCloseButton />
+    <div>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)}>
+          <div className="p-4 lg:p-6">
+            <DialogHeader className="mb-5">
+              <DialogTitle>Add Relayer</DialogTitle>
+            </DialogHeader>
 
-        <ModalBody>
-          <Flex flexDir="column" gap={4}>
-            <FormControl isRequired>
-              <FormLabel>Chain</FormLabel>
-              <SingleNetworkSelector
-                chainId={form.watch("chainId")}
-                onChange={(val) => form.setValue("chainId", val)}
-                client={client}
+            <div className="space-y-4">
+              <FormField
+                control={form.control}
+                name="chainId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Chain</FormLabel>
+                    <FormControl>
+                      <SingleNetworkSelector
+                        chainId={field.value}
+                        disableDeprecated
+                        disableChainId
+                        className="bg-card"
+                        client={client}
+                        onChange={(val) => field.onChange(val)}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </FormControl>
-            <FormControl isRequired>
-              <FormLabel>Backend Wallet</FormLabel>
-              <Select
-                {...form.register("backendWalletAddress", { required: true })}
-              >
-                <option value="" disabled selected hidden>
-                  Select a backend wallet to use as a relayer
-                </option>
-                {backendWallets?.map((wallet) => (
-                  <option key={wallet.address} value={wallet.address}>
-                    {shortenAddress(wallet.address)}
-                    {wallet.label && ` (${wallet.label})`}
-                  </option>
-                ))}
-              </Select>
-            </FormControl>
-            <FormControl>
-              <FormLabel>Label</FormLabel>
-              <Input
-                type="text"
-                placeholder="Enter a description for this relayer"
-                {...form.register("name")}
-              />
-            </FormControl>
-            <FormControl>
-              <FormLabel>Allowed Contracts</FormLabel>
-              <Textarea
-                {...form.register("allowedContractsRaw")}
-                placeholder="Enter a comma or newline-separated list of contract addresses"
-                rows={4}
-              />
-              <FormHelperText>Allow all contracts if omitted.</FormHelperText>
-            </FormControl>
-            <FormControl>
-              <FormLabel>Allowed Forwarders</FormLabel>
-              <Textarea
-                {...form.register("allowedForwardersRaw")}
-                placeholder="Enter a comma or newline-separated list of forwarder addresses"
-                rows={4}
-              />
-              <FormHelperText>Allow all forwarders if omitted.</FormHelperText>
-            </FormControl>
-          </Flex>
-        </ModalBody>
 
-        <ModalFooter as={Flex} gap={3}>
-          <Button type="button" onClick={disclosure.onClose} variant="ghost">
-            Cancel
-          </Button>
-          <Button
-            type="submit"
-            colorScheme="primary"
-            isDisabled={!form.formState.isValid}
-          >
-            Add
-          </Button>
-        </ModalFooter>
-      </ModalContent>
-    </Modal>
+              <FormField
+                control={form.control}
+                name="backendWalletAddress"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Backend Wallet</FormLabel>
+                    <FormControl>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                      >
+                        <SelectTrigger className="bg-card">
+                          <SelectValue placeholder="Select a backend wallet to use as a relayer" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {backendWallets?.map((wallet) => (
+                            <SelectItem
+                              key={wallet.address}
+                              value={wallet.address}
+                            >
+                              {shortenAddress(wallet.address)}
+                              {wallet.label && ` (${wallet.label})`}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Label</FormLabel>
+                    <FormControl>
+                      <Input
+                        className="bg-card"
+                        placeholder="Enter a description for this relayer"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="allowedContractsRaw"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Allowed Contracts</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        className="bg-card"
+                        placeholder="Enter a comma or newline-separated list of contract addresses"
+                        rows={3}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Allow all contracts if omitted.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="allowedForwardersRaw"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Allowed Forwarders</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        className="bg-card"
+                        placeholder="Enter a comma or newline-separated list of forwarder addresses"
+                        rows={3}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Allow all forwarders if omitted.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3 p-4 lg:p-6 border-t bg-card">
+            <Button variant="outline" onClick={() => setIsOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" className="gap-2">
+              {createRelayer.isPending && <Spinner className="size-4" />}
+              Add
+            </Button>
+          </div>
+        </form>
+      </Form>
+    </div>
   );
-};
+}
 
 /**
  * Returns a list of valid addresses from a comma or newline-separated string.

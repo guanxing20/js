@@ -1,13 +1,13 @@
 "use client";
 
-import { rotateSecretKeyClient } from "@3rdweb-sdk/react/hooks/useApi";
 import { useState } from "react";
+import type { Project } from "@/api/projects";
+import { rotateSecretKeyClient } from "@/hooks/useApi";
 import { RotateSecretKeyButton } from "../../settings/ProjectGeneralSettingsPage";
 
 export function SecretKeySection(props: {
   secretKeyMasked: string;
-  teamId: string;
-  projectId: string;
+  project: Project;
 }) {
   const [secretKeyMasked, setSecretKeyMasked] = useState(props.secretKeyMasked);
 
@@ -26,14 +26,13 @@ export function SecretKeySection(props: {
         </div>
 
         <RotateSecretKeyButton
-          rotateSecretKey={async () => {
-            return rotateSecretKeyClient({
-              teamId: props.teamId,
-              projectId: props.projectId,
-            });
-          }}
           onSuccess={(data) => {
             setSecretKeyMasked(data.data.secretMasked);
+          }}
+          rotateSecretKey={async () => {
+            return rotateSecretKeyClient({
+              project: props.project,
+            });
           }}
         />
       </div>

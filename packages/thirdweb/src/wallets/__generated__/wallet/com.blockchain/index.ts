@@ -5,7 +5,7 @@ export const wallet = {
   id: "com.blockchain",
   name: "Blockchain.com",
   homepage: "https://www.blockchain.com/en/app",
-  image_id: "6f913b80-86c0-46f9-61ca-cc90a1805900",
+  image_id: "0884948c-c6ce-421e-b4bd-3d2adb261500",
   app: {
     browser: null,
     ios: "https://apps.apple.com/us/app/blockchain-bitcoin-wallet/id493253309",
@@ -23,7 +23,7 @@ export const wallet = {
   rdns: null,
   mobile: {
     native: "blockchain-wallet://",
-    universal: "https://www.blockchain.com",
+    universal: "https://login.blockchain.com/app",
   },
   desktop: {
     native: null,

@@ -40,53 +40,98 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
-  productionBrowserSourceMaps: false,
   experimental: {
+    serverSourceMaps: false,
     webpackBuildWorker: true,
     webpackMemoryOptimizations: true,
-    serverSourceMaps: false,
   },
   async headers() {
     return [
       {
-        source: "/(.*)",
         headers: securityHeaders,
+        source: "/(.*)",
+      },
+    ];
+  },
+  productionBrowserSourceMaps: false,
+  async redirects() {
+    return [
+      {
+        source: "/connect/pay",
+        destination: "/payments/ui-components",
+        permanent: false,
+      },
+      {
+        source: "/connect/pay/:path*",
+        destination: "/payments/:path*",
+        permanent: false,
+      },
+      {
+        source: "/connect/ui",
+        destination: "/wallets/headless/account-components",
+        permanent: false,
+      },
+      {
+        source: "/connect/ui/nft",
+        destination: "/wallets/headless/nft-components",
+        permanent: false,
+      },
+      {
+        source: "/connect/ui/token",
+        destination: "/wallets/headless/token-components",
+        permanent: false,
+      },
+      {
+        source: "/connect/ui/chain",
+        destination: "/wallets/headless/chain-components",
+        permanent: false,
+      },
+      {
+        source: "/connect/ui/wallet",
+        destination: "/wallets/headless/wallet-components",
+        permanent: false,
+      },
+      {
+        source: "/connect/:path*",
+        destination: "/wallets/:path*",
+        permanent: false,
+      },
+      {
+        source: "/engine/airdrop",
+        destination: "/transactions/airdrop-tokens",
+        permanent: false,
+      },
+      {
+        source: "/engine/minting",
+        destination: "/transactions/mint-tokens",
+        permanent: false,
+      },
+      {
+        source: "/engine/webhooks",
+        destination: "/transactions/webhooks",
+        permanent: false,
+      },
+    ];
+  },
+  async rewrites() {
+    return [
+      {
+        destination: "https://us-assets.i.posthog.com/static/:path*",
+        source: "/_ph/static/:path*",
+      },
+      {
+        destination: "https://us.i.posthog.com/:path*",
+        source: "/_ph/:path*",
+      },
+      {
+        destination: "https://us.i.posthog.com/decide",
+        source: "/_ph/decide",
       },
     ];
   },
   webpack: (config) => {
     config.externals.push("pino-pretty", "lokijs", "encoding");
     return config;
-  },
-  async rewrites() {
-    return [
-      {
-        source: "/_ph/static/:path*",
-        destination: "https://us-assets.i.posthog.com/static/:path*",
-      },
-      {
-        source: "/_ph/:path*",
-        destination: "https://us.i.posthog.com/:path*",
-      },
-      {
-        source: "/_ph/decide",
-        destination: "https://us.i.posthog.com/decide",
-      },
-    ];
-  },
-  async redirects() {
-    return [
-      {
-        source: "/connect/sign-in",
-        destination: "/connect/sign-in/button",
-        permanent: false,
-      },
-      {
-        source: "/connect/account-abstraction",
-        destination: "/connect/account-abstraction/connect",
-        permanent: false,
-      },
-    ];
   },
 };
 

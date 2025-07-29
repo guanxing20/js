@@ -1,7 +1,7 @@
-import { getTeamBySlug } from "@/api/team";
 import { redirect } from "next/navigation";
-import { getAuthToken } from "../../../../../../../../api/lib/getAuthToken";
-import { fetchEcosystem } from "../../../utils/fetchEcosystem";
+import { getAuthToken } from "@/api/auth-token";
+import { fetchEcosystem } from "@/api/ecosystems";
+import { getTeamBySlug } from "@/api/team";
 import { fetchPartners } from "../configuration/hooks/fetchPartners";
 import { EcosystemAnalyticsPage } from "./components/EcosystemAnalyticsPage";
 
@@ -29,7 +29,7 @@ export default async function Page(props: {
   }
 
   const [ecosystem, team] = await Promise.all([
-    fetchEcosystem(params.slug, authToken, params.team_slug),
+    fetchEcosystem(params.slug, params.team_slug),
     getTeamBySlug(params.team_slug),
   ]);
 
@@ -42,15 +42,14 @@ export default async function Page(props: {
   }
 
   const partners = await fetchPartners({
-    ecosystem,
     authToken,
+    ecosystem,
     teamId: team.id,
   });
 
   return (
     <EcosystemAnalyticsPage
       ecosystemSlug={ecosystem.slug}
-      teamId={team.id}
       interval={searchParams.interval || "week"}
       partners={partners}
       range={
@@ -62,6 +61,7 @@ export default async function Page(props: {
             }
           : undefined
       }
+      teamId={team.id}
     />
   );
 }

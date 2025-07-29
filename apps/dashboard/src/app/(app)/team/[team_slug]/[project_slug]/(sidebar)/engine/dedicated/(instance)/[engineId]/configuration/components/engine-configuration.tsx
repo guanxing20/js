@@ -1,6 +1,6 @@
 "use client";
 
-import type { EngineInstance } from "@3rdweb-sdk/react/hooks/useEngine";
+import type { EngineInstance } from "@/hooks/useEngine";
 import { EngineCorsConfig } from "./cors";
 import { EngineWalletConfig } from "./engine-wallet-config";
 import { EngineIpAllowlistConfig } from "./ip-allowlist";
@@ -20,23 +20,25 @@ export const EngineConfiguration: React.FC<EngineConfigurationProps> = ({
   authToken,
 }) => {
   return (
-    <div className="flex flex-col gap-12">
+    <div>
       <EngineWalletConfig
+        authToken={authToken}
         instance={instance}
+        projectSlug={projectSlug}
         teamSlug={teamSlug}
-        projectSlug={projectSlug}
-        authToken={authToken}
       />
-      <EngineCorsConfig instanceUrl={instance.url} authToken={authToken} />
-      <EngineIpAllowlistConfig
-        instanceUrl={instance.url}
-        authToken={authToken}
-      />
-      <EngineSystem
-        instance={instance}
-        teamIdOrSlug={teamSlug}
-        projectSlug={projectSlug}
-      />
+      <div className="space-y-8">
+        <EngineCorsConfig authToken={authToken} instanceUrl={instance.url} />
+        <EngineIpAllowlistConfig
+          authToken={authToken}
+          instanceUrl={instance.url}
+        />
+        <EngineSystem
+          instance={instance}
+          projectSlug={projectSlug}
+          teamIdOrSlug={teamSlug}
+        />
+      </div>
     </div>
   );
 };

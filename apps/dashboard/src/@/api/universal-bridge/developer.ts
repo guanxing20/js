@@ -1,6 +1,7 @@
 "use server";
-import { getAuthToken } from "app/(app)/api/lib/getAuthToken";
-import { NEXT_PUBLIC_THIRDWEB_BRIDGE_HOST } from "../../constants/public-envs";
+import type { Address } from "thirdweb";
+import { getAuthToken } from "@/api/auth-token";
+import { NEXT_PUBLIC_THIRDWEB_BRIDGE_HOST } from "@/constants/public-envs";
 
 const UB_BASE_URL = NEXT_PUBLIC_THIRDWEB_BRIDGE_HOST;
 
@@ -14,19 +15,16 @@ type Webhook = {
   version?: number; // TODO (UB) make this mandatory after migration
 };
 
-export async function getWebhooks(props: {
-  clientId: string;
-  teamId: string;
-}) {
+export async function getWebhooks(props: { clientId: string; teamId: string }) {
   const authToken = await getAuthToken();
   const res = await fetch(`${UB_BASE_URL}/v1/developer/webhooks`, {
-    method: "GET",
     headers: {
+      Authorization: `Bearer ${authToken}`,
       "Content-Type": "application/json",
       "x-client-id": props.clientId,
       "x-team-id": props.teamId,
-      Authorization: `Bearer ${authToken}`,
     },
+    method: "GET",
   });
 
   if (!res.ok) {
@@ -49,19 +47,19 @@ export async function createWebhook(props: {
   const authToken = await getAuthToken();
 
   const res = await fetch(`${UB_BASE_URL}/v1/developer/webhooks`, {
-    method: "POST",
     body: JSON.stringify({
-      url: props.url,
       label: props.label,
-      version: props.version,
       secret: props.secret,
+      url: props.url,
+      version: props.version,
     }),
     headers: {
+      Authorization: `Bearer ${authToken}`,
       "Content-Type": "application/json",
       "x-client-id": props.clientId,
       "x-team-id": props.teamId,
-      Authorization: `Bearer ${authToken}`,
     },
+    method: "POST",
   });
 
   if (!res.ok) {
@@ -81,13 +79,146 @@ export async function deleteWebhook(props: {
   const res = await fetch(
     `${UB_BASE_URL}/v1/developer/webhooks/${props.webhookId}`,
     {
-      method: "DELETE",
       headers: {
+        Authorization: `Bearer ${authToken}`,
         "Content-Type": "application/json",
         "x-client-id": props.clientId,
         "x-team-id": props.teamId,
-        Authorization: `Bearer ${authToken}`,
       },
+      method: "DELETE",
+    },
+  );
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text);
+  }
+
+  return;
+}
+
+type PaymentLink = {
+  id: string;
+  link: string;
+  title: string;
+  imageUrl: string;
+  createdAt: string;
+  updatedAt: string;
+  destinationToken: {
+    chainId: number;
+    address: Address;
+    symbol: string;
+    name: string;
+    decimals: number;
+    iconUri: string;
+  };
+  receiver: Address;
+  amount: bigint;
+};
+
+export async function getPaymentLinks(props: {
+  clientId: string;
+  teamId: string;
+}): Promise<Array<PaymentLink>> {
+  const authToken = await getAuthToken();
+  const res = await fetch(`${UB_BASE_URL}/v1/developer/links`, {
+    headers: {
+      Authorization: `Bearer ${authToken}`,
+      "Content-Type": "application/json",
+      "x-client-id": props.clientId,
+      "x-team-id": props.teamId,
+    },
+    method: "GET",
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text);
+  }
+
+  const json = (await res.json()) as {
+    data: Array<PaymentLink & { amount: string }>;
+  };
+  return json.data.map((link) => ({
+    id: link.id,
+    link: link.link,
+    title: link.title,
+    imageUrl: link.imageUrl,
+    createdAt: link.createdAt,
+    updatedAt: link.updatedAt,
+    destinationToken: {
+      chainId: link.destinationToken.chainId,
+      address: link.destinationToken.address,
+      symbol: link.destinationToken.symbol,
+      name: link.destinationToken.name,
+      decimals: link.destinationToken.decimals,
+      iconUri: link.destinationToken.iconUri,
+    },
+    receiver: link.receiver,
+    amount: BigInt(link.amount),
+  }));
+}
+
+export async function createPaymentLink(props: {
+  clientId: string;
+  teamId: string;
+  title: string;
+  imageUrl?: string;
+  intent: {
+    destinationChainId: number;
+    destinationTokenAddress: Address;
+    receiver: Address;
+    amount: bigint;
+    purchaseData?: unknown;
+  };
+}) {
+  const authToken = await getAuthToken();
+
+  const res = await fetch(`${UB_BASE_URL}/v1/developer/links`, {
+    body: JSON.stringify({
+      title: props.title,
+      imageUrl: props.imageUrl,
+      intent: {
+        destinationChainId: props.intent.destinationChainId,
+        destinationTokenAddress: props.intent.destinationTokenAddress,
+        receiver: props.intent.receiver,
+        amount: props.intent.amount.toString(),
+        purchaseData: props.intent.purchaseData,
+      },
+    }),
+    headers: {
+      Authorization: `Bearer ${authToken}`,
+      "Content-Type": "application/json",
+      "x-client-id": props.clientId,
+      "x-team-id": props.teamId,
+    },
+    method: "POST",
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text);
+  }
+
+  return;
+}
+
+export async function deletePaymentLink(props: {
+  clientId: string;
+  teamId: string;
+  paymentLinkId: string;
+}) {
+  const authToken = await getAuthToken();
+  const res = await fetch(
+    `${UB_BASE_URL}/v1/developer/links/${props.paymentLinkId}`,
+    {
+      headers: {
+        Authorization: `Bearer ${authToken}`,
+        "Content-Type": "application/json",
+        "x-client-id": props.clientId,
+        "x-team-id": props.teamId,
+      },
+      method: "DELETE",
     },
   );
 
@@ -106,19 +237,16 @@ export type Fee = {
   updatedAt: string;
 };
 
-export async function getFees(props: {
-  clientId: string;
-  teamId: string;
-}) {
+export async function getFees(props: { clientId: string; teamId: string }) {
   const authToken = await getAuthToken();
   const res = await fetch(`${UB_BASE_URL}/v1/developer/fees`, {
-    method: "GET",
     headers: {
-      "Content-Type": "application/json",
-      "x-team-id": props.teamId,
-      "x-client-id": props.clientId,
       Authorization: `Bearer ${authToken}`,
+      "Content-Type": "application/json",
+      "x-client-id": props.clientId,
+      "x-team-id": props.teamId,
     },
+    method: "GET",
   });
 
   if (!res.ok) {
@@ -138,17 +266,17 @@ export async function updateFee(props: {
 }) {
   const authToken = await getAuthToken();
   const res = await fetch(`${UB_BASE_URL}/v1/developer/fees`, {
-    method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-      "x-team-id": props.teamId,
-      "x-client-id": props.clientId,
-      Authorization: `Bearer ${authToken}`,
-    },
     body: JSON.stringify({
-      feeRecipient: props.feeRecipient,
       feeBps: props.feeBps,
+      feeRecipient: props.feeRecipient,
     }),
+    headers: {
+      Authorization: `Bearer ${authToken}`,
+      "Content-Type": "application/json",
+      "x-client-id": props.clientId,
+      "x-team-id": props.teamId,
+    },
+    method: "PUT",
   });
 
   if (!res.ok) {
@@ -201,37 +329,35 @@ export type Payment = {
 export async function getPayments(props: {
   clientId: string;
   teamId: string;
+  paymentLinkId?: string;
   limit?: number;
   offset?: number;
 }) {
   const authToken = await getAuthToken();
 
   // Build URL with query parameters if provided
-  let url = `${UB_BASE_URL}/v1/developer/payments`;
-  const queryParams = new URLSearchParams();
+  const url = new URL(`${UB_BASE_URL}/v1/developer/payments`);
 
   if (props.limit) {
-    queryParams.append("limit", props.limit.toString());
+    url.searchParams.append("limit", props.limit.toString());
   }
 
   if (props.offset) {
-    queryParams.append("offset", props.offset.toString());
+    url.searchParams.append("offset", props.offset.toString());
   }
 
-  // Append query params to URL if any exist
-  const queryString = queryParams.toString();
-  if (queryString) {
-    url = `${url}?${queryString}`;
+  if (props.paymentLinkId) {
+    url.searchParams.append("paymentLinkId", props.paymentLinkId);
   }
 
-  const res = await fetch(url, {
-    method: "GET",
+  const res = await fetch(url.toString(), {
     headers: {
+      Authorization: `Bearer ${authToken}`,
       "Content-Type": "application/json",
       "x-client-id": props.clientId,
       "x-team-id": props.teamId,
-      Authorization: `Bearer ${authToken}`,
     },
+    method: "GET",
   });
 
   if (!res.ok) {

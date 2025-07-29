@@ -9,11 +9,14 @@ import { getCompilerMetadata } from "../../../contract/actions/get-compiler-meta
 import { getContract } from "../../../contract/contract.js";
 import { decimals } from "../../../extensions/erc20/read/decimals.js";
 import { getToken } from "../../../pay/convert/get-token.js";
+import type { SupportedFiatCurrency } from "../../../pay/convert/type.js";
 import { encode } from "../../../transaction/actions/encode.js";
 import type { PreparedTransaction } from "../../../transaction/prepare-transaction.js";
 import { getTransactionGasCost } from "../../../transaction/utils.js";
 import { resolvePromisedValue } from "../../../utils/promise/resolve-promised-value.js";
 import { toTokens } from "../../../utils/units.js";
+import type { Wallet } from "../../../wallets/interfaces/wallet.js";
+import { hasSponsoredTransactionsEnabled } from "../../../wallets/smart/is-smart-wallet.js";
 import {
   formatCurrencyAmount,
   formatTokenAmount,
@@ -40,6 +43,8 @@ interface TransactionDetails {
 interface UseTransactionDetailsOptions {
   transaction: PreparedTransaction;
   client: ThirdwebClient;
+  wallet: Wallet | undefined;
+  currency?: SupportedFiatCurrency;
 }
 
 /**
@@ -48,23 +53,21 @@ interface UseTransactionDetailsOptions {
  */
 export function useTransactionDetails({
   transaction,
+  currency,
   client,
+  wallet,
 }: UseTransactionDetailsOptions) {
   const chainMetadata = useChainMetadata(transaction.chain);
+  const hasSponsoredTransactions = hasSponsoredTransactionsEnabled(wallet);
 
   return useQuery({
-    queryKey: [
-      "transaction-details",
-      transaction.to,
-      transaction.chain.id,
-      transaction.erc20Value?.toString(),
-    ],
+    enabled: !!transaction.to && !!chainMetadata.data,
     queryFn: async (): Promise<TransactionDetails> => {
       // Create contract instance for metadata fetching
       const contract = getContract({
-        client,
-        chain: transaction.chain,
         address: transaction.to as string,
+        chain: transaction.chain,
+        client,
       });
 
       const [contractMetadata, value, erc20Value, transactionData] =
@@ -78,17 +81,19 @@ export function useTransactionDetails({
       const [tokenInfo, gasCostWei] = await Promise.all([
         getToken(
           client,
-          erc20Value ? erc20Value.tokenAddress : NATIVE_TOKEN_ADDRESS,
+          erc20Value?.tokenAddress || NATIVE_TOKEN_ADDRESS,
           transaction.chain.id,
         ).catch(() => null),
-        getTransactionGasCost(transaction).catch(() => null),
+        hasSponsoredTransactions
+          ? 0n
+          : getTransactionGasCost(transaction).catch(() => null),
       ]);
 
       // Process function info from ABI if available
       let functionInfo = {
+        description: undefined,
         functionName: "Contract Call",
         selector: "0x",
-        description: undefined,
       };
 
       if (contractMetadata?.abi && transactionData.length >= 10) {
@@ -114,9 +119,9 @@ export function useTransactionDetails({
 
           if (matchingFunction) {
             functionInfo = {
+              description: undefined,
               functionName: matchingFunction.name,
-              selector,
-              description: undefined, // Skip devdoc for now
+              selector, // Skip devdoc for now
             };
           }
         } catch {
@@ -131,9 +136,9 @@ export function useTransactionDetails({
         if (erc20Value) {
           return decimals({
             contract: getContract({
-              client,
-              chain: transaction.chain,
               address: erc20Value.tokenAddress,
+              chain: transaction.chain,
+              client,
             }),
           });
         }
@@ -146,32 +151,39 @@ export function useTransactionDetails({
         chainMetadata.data?.nativeCurrency?.symbol || "ETH";
       const tokenSymbol = tokenInfo?.symbol || nativeTokenSymbol;
 
-      const totalCostWei = erc20Value
-        ? erc20Value.amountWei
-        : (value || 0n) + (gasCostWei || 0n);
+      const totalCostWei =
+        erc20Value &&
+        erc20Value.tokenAddress.toLowerCase() !== NATIVE_TOKEN_ADDRESS
+          ? erc20Value.amountWei
+          : (value || 0n) + (gasCostWei || 0n);
       const totalCost = toTokens(totalCostWei, decimal);
 
-      const usdValue = tokenInfo?.priceUsd
-        ? Number(totalCost) * tokenInfo.priceUsd
-        : null;
+      const price = tokenInfo?.prices[currency || "USD"] || 0;
+      const usdValue = price ? Number(totalCost) * price : null;
 
       return {
         contractMetadata,
+        costWei,
         functionInfo,
-        usdValueDisplay: usdValue
-          ? formatCurrencyAmount("USD", usdValue)
-          : null,
-        txCostDisplay: `${formatTokenAmount(costWei, decimal)} ${tokenSymbol}`,
         gasCostDisplay: gasCostWei
           ? `${formatTokenAmount(gasCostWei, 18)} ${nativeTokenSymbol}`
           : null,
-        tokenInfo,
-        costWei,
         gasCostWei,
+        tokenInfo,
         totalCost,
         totalCostWei,
+        txCostDisplay: `${formatTokenAmount(costWei, decimal)} ${tokenSymbol}`,
+        usdValueDisplay: usdValue
+          ? formatCurrencyAmount(currency || "USD", usdValue)
+          : null,
       };
     },
-    enabled: !!transaction.to && !!chainMetadata.data,
+    queryKey: [
+      "transaction-details",
+      transaction.to,
+      transaction.chain.id,
+      transaction.erc20Value?.toString(),
+      hasSponsoredTransactions,
+    ],
   });
 }

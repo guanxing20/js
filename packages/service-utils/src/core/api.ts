@@ -84,7 +84,10 @@ type TeamCapabilities = {
   };
   nebula: {
     enabled: boolean;
-    rateLimit: number;
+    rateLimit: {
+      perSecond: number;
+      perMinute: number;
+    };
   };
   bundler: {
     enabled: boolean;
@@ -106,6 +109,14 @@ type TeamCapabilities = {
     rateLimit: number;
   };
   pay: {
+    enabled: boolean;
+    rateLimit: number;
+  };
+  mcp: {
+    enabled: boolean;
+    rateLimit: number;
+  };
+  gateway: {
     enabled: boolean;
     rateLimit: number;
   };
@@ -150,6 +161,7 @@ export type TeamResponse = {
   dedicatedSupportChannel: {
     type: "slack" | "telegram";
     name: string;
+    link: string | null;
   } | null;
 };
 
@@ -225,6 +237,8 @@ export type ProjectService =
       maskedAdminKey?: string | null;
       managementAccessToken?: string | null;
       rotationCode?: string | null;
+      encryptedAdminKey?: string | null;
+      encryptedWalletAccessToken?: string | null;
     }
   | ProjectBundlerService
   | ProjectEmbeddedWalletsService;
@@ -285,11 +299,11 @@ export async function fetchTeamAndProject(
   for (let i = 0; i < retryCount; i++) {
     try {
       const response = await fetch(url, {
-        method: "GET",
         headers: {
           ...authHeaders,
           "content-type": "application/json",
         },
+        method: "GET",
       });
 
       // TODO: if the response is a well understood status code (401, 402, etc), we should skip retry logic

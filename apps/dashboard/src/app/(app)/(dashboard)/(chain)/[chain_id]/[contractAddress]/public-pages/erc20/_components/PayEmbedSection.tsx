@@ -2,45 +2,47 @@
 
 import { useTheme } from "next-themes";
 import type { Chain, ThirdwebClient } from "thirdweb";
-import { PayEmbed } from "thirdweb/react";
-import { getSDKTheme } from "../../../../../../../components/sdk-component-theme";
+import { BuyWidget } from "thirdweb/react";
+import {
+  reportAssetBuyFailed,
+  reportAssetBuySuccessful,
+} from "@/analytics/report";
+import { parseError } from "@/utils/errorParser";
+import { getSDKTheme } from "@/utils/sdk-component-theme";
 
 export function BuyTokenEmbed(props: {
   client: ThirdwebClient;
   chain: Chain;
-  tokenSymbol: string;
-  tokenName: string;
   tokenAddress: string;
 }) {
   const { theme } = useTheme();
   return (
-    <PayEmbed
+    <BuyWidget
+      amount="1"
+      chain={props.chain}
       className="!rounded-xl !w-full"
       client={props.client}
-      payOptions={{
-        mode: "fund_wallet",
-        metadata: {
-          name: `Buy ${props.tokenSymbol}`,
-        },
-        prefillBuy: {
-          chain: props.chain,
-          token: {
-            name: props.tokenName,
-            symbol: props.tokenSymbol,
-            address: props.tokenAddress,
-          },
-          amount: "1",
-          allowEdits: {
-            token: false,
-            chain: false,
-            amount: true,
-          },
-        },
-      }}
-      theme={getSDKTheme(theme === "light" ? "light" : "dark")}
       connectOptions={{
         autoConnect: false,
       }}
+      onError={(e) => {
+        const errorMessage = parseError(e);
+        reportAssetBuyFailed({
+          assetType: "coin",
+          chainId: props.chain.id,
+          contractType: "DropERC20",
+          error: errorMessage,
+        });
+      }}
+      onSuccess={() => {
+        reportAssetBuySuccessful({
+          assetType: "coin",
+          chainId: props.chain.id,
+          contractType: "DropERC20",
+        });
+      }}
+      theme={getSDKTheme(theme === "light" ? "light" : "dark")}
+      tokenAddress={props.tokenAddress as `0x${string}`}
     />
   );
 }

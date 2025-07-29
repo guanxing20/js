@@ -1,5 +1,5 @@
-import type { SomeDoc } from "@/app/references/components/TDoc/types";
 import type { BlockTag, TransformedDoc } from "typedoc-better-json";
+import type { SomeDoc } from "@/app/references/components/TDoc/types";
 import type {
   LinkGroup,
   SidebarLink,
@@ -8,44 +8,43 @@ import { subgroups } from "./subgroups";
 import { uniqueSlugger } from "./uniqueSlugger";
 
 const tagsToGroup = {
-  "@contract": "Contract",
-  "@claimConditions": "Claim Conditions",
-  "@nftDrop": "NFT Drop",
-  "@platformFees": "Royalty & Fees",
-  "@nft": "NFT",
-  "@metadata": "Metadata",
-  "@permissionControl": "Permissions Control",
-  "@networkConnection": "Network Connection",
-  "@delayedReveal": "Delayed Reveal",
-  "@marketplace": "Marketplace",
-  "@walletConnection": "Wallet Connection",
-  "@walletUtils": "Wallet Utilities",
-  "@token": "Tokens",
-  "@auth": "Auth",
-  "@smartWallet": "Smart Wallet",
-  "@connectWallet": "Connect Wallet",
+  "@abstractWallet": "Abstract Wallets",
+  "@account": "Account",
   "@appURI": "App URI",
-  "@storage": "Storage",
+  "@auth": "Auth",
+  "@bridge": "Payments",
+  "@chain": "Chain",
+  "@claimConditions": "Claim Conditions",
+  "@client": "Client",
+  "@connectWallet": "Connect Wallet",
+  "@contract": "Contract",
+  "@delayedReveal": "Delayed Reveal",
+  "@engine": "Engine",
+  "@extension": "Extensions",
+  "@insight": "Insight",
+  "@locale": "Locale",
+  "@marketplace": "Marketplace",
+  "@metadata": "Metadata",
+  "@modules": "Modules",
+  "@nebula": "Nebula",
+  "@networkConnection": "Network Connection",
+  "@nft": "NFT",
+  "@nftDrop": "NFT Drop",
   "@others": "Miscellaneous",
+  "@permissionControl": "Permissions Control",
+  "@platformFees": "Royalty & Fees",
+  "@rpc": "RPC",
+  "@smartWallet": "Smart Wallet",
+  "@social": "Social API",
+  "@storage": "Storage",
+  "@theme": "Theme",
+  "@token": "Tokens",
+  "@transaction": "Transactions",
+  "@utils": "Utils",
   "@wallet": "Wallets",
   "@walletConfig": "WalletConfig",
-  "@theme": "Theme",
-  "@locale": "Locale",
-  "@abstractWallet": "Abstract Wallets",
-  "@extension": "Extensions",
-  "@rpc": "RPC",
-  "@transaction": "Transactions",
-  "@bridge": "Universal Bridge",
-  "@buyCrypto": "Buy Crypto",
-  "@utils": "Utils",
-  "@chain": "Chain",
-  "@social": "Social API",
-  "@modules": "Modules",
-  "@client": "Client",
-  "@account": "Account",
-  "@nebula": "Nebula",
-  "@insight": "Insight",
-  "@engine": "Engine",
+  "@walletConnection": "Wallet Connection",
+  "@walletUtils": "Wallet Utilities",
 } as const;
 
 type TagKey = keyof typeof tagsToGroup;
@@ -70,7 +69,6 @@ const sidebarGroupOrder: TagKey[] = [
   "@social",
   "@auth",
   "@nft",
-  "@buyCrypto",
   "@nftDrop",
   "@claimConditions",
   "@delayedReveal",
@@ -194,26 +192,26 @@ export function getSidebarLinkGroups(doc: TransformedDoc, path: string) {
       const extensionLinkGroups = Object.entries(extensionGroups).map(
         ([extensionName, docs]) => {
           const links = docs.map((d) => ({
-            name: d.name,
             href: getLink(`${path}/${extensionName.toLowerCase()}/${d.name}`),
+            name: d.name,
           }));
           return {
-            name: extensionName,
             links,
+            name: extensionName,
           };
         },
       );
       if (!linkGroups.find((group) => group.name === name)) {
         linkGroups.push({
-          name: name,
           href: getLink(`${path}/${key}`),
-          links: [{ name: "Extensions", links: extensionLinkGroups }],
           isCollapsible: false,
+          links: [{ links: extensionLinkGroups, name: "Extensions" }],
+          name: name,
         });
       } else {
         linkGroups
           .find((group) => group.name === name)
-          ?.links.push({ name: "Extensions", links: extensionLinkGroups });
+          ?.links.push({ links: extensionLinkGroups, name: "Extensions" });
       }
     }
 
@@ -234,25 +232,25 @@ export function getSidebarLinkGroups(doc: TransformedDoc, path: string) {
       const extensionLinkGroups = Object.entries(extensionGroups).map(
         ([extensionName, docs]) => {
           const links = docs.map((d) => ({
-            name: d.name,
             href: getLink(`${path}/${extensionName.toLowerCase()}/${d.name}`),
+            name: d.name,
           }));
           return {
-            name: extensionName,
             links,
+            name: extensionName,
           };
         },
       );
       if (!linkGroups.find((group) => group.name === name)) {
         linkGroups.push({
-          name: name,
           href: getLink(`${path}/${key}`),
-          links: [{ name: "modules", links: extensionLinkGroups }],
+          links: [{ links: extensionLinkGroups, name: "modules" }],
+          name: name,
         });
       } else {
         linkGroups
           .find((group) => group.name === name)
-          ?.links.push({ name: "Modules", links: extensionLinkGroups });
+          ?.links.push({ links: extensionLinkGroups, name: "Modules" });
       }
     }
 
@@ -260,12 +258,10 @@ export function getSidebarLinkGroups(doc: TransformedDoc, path: string) {
       const bridgeGroups = bridge.reduce(
         (acc, d) => {
           const [, moduleName] = getCustomTag(d) || [];
-          if (moduleName) {
-            if (!acc[moduleName]) {
-              acc[moduleName] = [];
-            }
-            acc[moduleName]?.push(d);
+          if (!acc[moduleName ?? "common"]) {
+            acc[moduleName ?? "common"] = [];
           }
+          acc[moduleName ?? "common"]?.push(d);
           return acc;
         },
         {} as Record<string, SomeDoc[]>,
@@ -278,13 +274,13 @@ export function getSidebarLinkGroups(doc: TransformedDoc, path: string) {
         .filter(([namespaceName]) => namespaceName.toLowerCase() !== "common")
         .map(([namespaceName, docs]) => {
           const links = docs.map((d) => ({
-            name: d.name,
             href: getLink(`${path}/${namespaceName.toLowerCase()}/${d.name}`),
+            name: d.name,
           }));
           return {
-            name: namespaceName,
             href: "",
             links,
+            name: namespaceName,
           };
         });
 
@@ -295,23 +291,23 @@ export function getSidebarLinkGroups(doc: TransformedDoc, path: string) {
         const docs = group[1];
         for (const doc of docs) {
           bridgeLinkGroups.push({
-            name: doc.name,
             href: getLink(`${path}/${doc.name}`),
+            name: doc.name,
           });
         }
       }
 
       if (!linkGroups.find((group) => group.name === name)) {
         linkGroups.push({
-          name: name,
           href: getLink(`${path}/${key}`),
-          links: [{ name: "Universal Bridge", links: bridgeLinkGroups }],
           isCollapsible: false,
+          links: [{ links: bridgeLinkGroups, name: "Payments" }],
+          name: name,
         });
       } else {
         linkGroups
           .find((group) => group.name === name)
-          ?.links.push({ name: "Universal Bridge", links: bridgeLinkGroups });
+          ?.links.push({ links: bridgeLinkGroups, name: "Payments" });
       }
     }
 
@@ -355,11 +351,11 @@ export function getSidebarLinkGroups(doc: TransformedDoc, path: string) {
       }
 
       links.push({
-        name: tagsToGroup[tag],
         links: groupDocs.map((d) => ({
-          name: d.name,
           href: getLink(`${path}/${d.name}`),
+          name: d.name,
         })),
+        name: tagsToGroup[tag],
       });
     };
 
@@ -369,8 +365,8 @@ export function getSidebarLinkGroups(doc: TransformedDoc, path: string) {
 
     for (const d of ungroupedLinks) {
       links.push({
-        name: d.name,
         href: getLink(`${path}/${d.name}`),
+        name: d.name,
       });
     }
 
@@ -383,10 +379,10 @@ export function getSidebarLinkGroups(doc: TransformedDoc, path: string) {
     // create new group
     else {
       linkGroups.push({
-        name: name,
-        links: links,
         href: getLink(`${path}/${key}`),
         isCollapsible: false,
+        links: links,
+        name: name,
       });
     }
   }

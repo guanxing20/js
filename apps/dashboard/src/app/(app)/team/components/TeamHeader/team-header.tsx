@@ -1,13 +1,10 @@
+import { cookies } from "next/headers";
+import { getAuthToken, getAuthTokenWalletAddress } from "@/api/auth-token";
 import { getProjects } from "@/api/projects";
 import { getTeams } from "@/api/team";
+import { LAST_USED_TEAM_ID } from "@/constants/cookies";
 import { getClientThirdwebClient } from "@/constants/thirdweb-client.client";
-import { LAST_USED_TEAM_ID } from "constants/cookies";
-import { cookies } from "next/headers";
 import { getRawAccount } from "../../../account/settings/getAccount";
-import {
-  getAuthToken,
-  getAuthTokenWalletAddress,
-} from "../../../api/lib/getAuthToken";
 import { HeaderLoggedOut } from "../HeaderLoggedOut/HeaderLoggedOut";
 import { TeamHeaderLoggedIn } from "./team-header-logged-in.client";
 
@@ -34,8 +31,8 @@ export async function TeamHeader() {
 
   const teamsAndProjects = await Promise.all(
     teams.map(async (team) => ({
-      team,
       projects: await getProjects(team.slug),
+      team,
     })),
   );
 
@@ -53,12 +50,12 @@ export async function TeamHeader() {
 
   return (
     <TeamHeaderLoggedIn
-      client={lastUsedTeamClient}
-      currentTeam={selectedTeam}
-      teamsAndProjects={teamsAndProjects}
-      currentProject={undefined}
       account={account}
       accountAddress={accountAddress}
+      client={lastUsedTeamClient}
+      currentProject={undefined}
+      currentTeam={selectedTeam}
+      teamsAndProjects={teamsAndProjects}
     />
   );
 }

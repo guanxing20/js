@@ -3,147 +3,147 @@ import { insightBlueprints } from "./insight/insightBlueprints";
 
 const staticSidebarLinks: SidebarLink[] = [
   {
-    name: "Wallets",
     isCollapsible: false,
     links: [
       {
+        href: "/wallets/sign-in/button",
         name: "ConnectButton",
-        href: "/connect/sign-in/button",
       },
       {
+        href: "/wallets/sign-in/embed",
         name: "ConnectEmbed",
-        href: "/connect/sign-in/embed",
       },
       {
+        href: "/wallets/sign-in/headless",
         name: "Headless Connect",
-        href: "/connect/sign-in/headless",
       },
       {
+        href: "/wallets/in-app-wallet",
         name: "In-App Wallets",
-        href: "/connect/in-app-wallet",
       },
       {
+        href: "/wallets/in-app-wallet/ecosystem",
         name: "Ecosystem Wallets",
-        href: "/connect/in-app-wallet/ecosystem",
       },
       {
+        href: "/wallets/account-abstraction/sponsor",
         name: "EIP-4337",
-        href: "/connect/account-abstraction/sponsor",
       },
       {
+        href: "/wallets/account-abstraction/7702",
         name: "EIP-7702",
-        href: "/connect/account-abstraction/7702",
       },
       {
+        href: "/wallets/account-abstraction/5792",
         name: "EIP-5792",
-        href: "/connect/account-abstraction/5792",
       },
       {
+        href: "/wallets/account-abstraction/native-aa",
         name: "Native AA (zkSync)",
-        href: "/connect/account-abstraction/native-aa",
       },
       {
+        href: "/wallets/auth",
         name: "Auth",
-        href: "/connect/auth",
       },
       {
+        href: "/wallets/social",
         name: "Social",
-        href: "/connect/social",
       },
       {
+        href: "/wallets/blockchain-api",
         name: "Blockchain API",
-        href: "/connect/blockchain-api",
       },
       {
-        name: "Headless Components",
         expanded: false,
         links: [
           {
+            href: "/wallets/headless/account-components",
             name: "Account",
-            href: "/connect/ui",
           },
           {
+            href: "/wallets/headless/nft-components",
             name: "NFT",
-            href: "/connect/ui/nft",
           },
           {
+            href: "/wallets/headless/token-components",
             name: "Token",
-            href: "/connect/ui/token",
           },
           {
+            href: "/wallets/headless/chain-components",
             name: "Chain",
-            href: "/connect/ui/chain",
           },
           {
+            href: "/wallets/headless/wallet-components",
             name: "Wallet",
-            href: "/connect/ui/wallet",
           },
         ],
+        name: "Headless Components",
       },
     ],
+    name: "Wallets",
   },
 ];
 
 const universalBridgeSidebarLinks: SidebarLink = {
-  name: "Universal Bridge",
-  isCollapsible: false,
   expanded: false,
+  isCollapsible: false,
   links: [
     {
+      href: "/payments/ui-components",
       name: "UI Component",
-      href: "/connect/pay",
     },
     {
+      href: "/payments/fund-wallet",
       name: "Buy Crypto",
-      href: "/connect/pay/fund-wallet",
     },
     {
+      href: "/payments/commerce",
       name: "Checkout",
-      href: "/connect/pay/commerce",
     },
     {
+      href: "/payments/transactions",
       name: "Transactions",
-      href: "/connect/pay/transactions",
     },
     {
+      href: "/payments/backend",
       name: "Backend API",
-      href: "/connect/pay/backend",
     },
   ],
+  name: "Payments",
 };
 
 const engineSidebarLinks: SidebarLink = {
-  name: "Transactions",
-  isCollapsible: false,
   expanded: false,
+  isCollapsible: false,
   links: [
     {
+      href: "/transactions/airdrop-tokens",
       name: "Airdrop",
-      href: "/engine/airdrop",
     },
     {
+      href: "/transactions/mint-tokens",
       name: "Mint NFTs",
-      href: "/engine/minting",
     },
     {
+      href: "/transactions/webhooks",
       name: "Webhooks",
-      href: "/engine/webhooks",
     },
   ],
+  name: "Transactions",
 };
 
 export function getSidebarLinks() {
   const insightLinks: SidebarLink[] = insightBlueprints.map((blueprint) => {
     return {
-      name: blueprint.name,
       expanded: false,
       links: blueprint.paths.map((pathInfo) => {
         return {
-          name: pathInfo.name,
-          href: `/insight/${blueprint.id}?path=${pathInfo.path}`,
           crossedOut: pathInfo.deprecated,
+          href: `/insight/${blueprint.id}?path=${pathInfo.path}`,
+          name: pathInfo.name,
         };
       }),
+      name: blueprint.name,
     };
   });
 
@@ -152,10 +152,10 @@ export function getSidebarLinks() {
     universalBridgeSidebarLinks,
     engineSidebarLinks,
     {
-      name: "Insight",
-      isCollapsible: false,
       expanded: false,
+      isCollapsible: false,
       links: insightLinks,
+      name: "Insight",
     },
   ];
 

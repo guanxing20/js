@@ -1,5 +1,65 @@
 # @thirdweb-dev/service-utils
 
+## 0.10.7
+
+### Patch Changes
+
+- [#7718](https://github.com/thirdweb-dev/js/pull/7718) [`80c6b6a`](https://github.com/thirdweb-dev/js/commit/80c6b6a79371d345c2ea95d2a904e1e85e766b99) Thanks [@jnsdls](https://github.com/jnsdls)! - add `gateway` team capabilities
+
+## 0.10.6
+
+### Patch Changes
+
+- [#7700](https://github.com/thirdweb-dev/js/pull/7700) [`9d8c7f1`](https://github.com/thirdweb-dev/js/commit/9d8c7f1f7d14329d2eab49d4af7e37086924f40e) Thanks [@jnsdls](https://github.com/jnsdls)! - add `gateway` to possible usage sources
+
+## 0.10.5
+
+### Patch Changes
+
+- [#7636](https://github.com/thirdweb-dev/js/pull/7636) [`746b0c9`](https://github.com/thirdweb-dev/js/commit/746b0c9d8b597517898bed5fd93ac6717f5bf8dd) Thanks [@jnsdls](https://github.com/jnsdls)! - add `mcp` to team capabilities
+
+## 0.10.4
+
+### Patch Changes
+
+- [#7614](https://github.com/thirdweb-dev/js/pull/7614) [`f82f885`](https://github.com/thirdweb-dev/js/commit/f82f885dad9a0eaecd64f365adbd1f49517b4fd9) Thanks [@jnsdls](https://github.com/jnsdls)! - update nebula ratelimit type
+
+- [#7613](https://github.com/thirdweb-dev/js/pull/7613) [`34d2fdd`](https://github.com/thirdweb-dev/js/commit/34d2fddf49291eb31d03fef98460ee719aef1044) Thanks [@jnsdls](https://github.com/jnsdls)! - update error response url
+
+## 0.10.3
+
+### Patch Changes
+
+- [#7570](https://github.com/thirdweb-dev/js/pull/7570) [`585eac2`](https://github.com/thirdweb-dev/js/commit/585eac2a6f49877318cb275f6fff5910ceabdbfb) Thanks [@joaquim-verges](https://github.com/joaquim-verges)! - Add encryption utilities
+
+## 0.10.2
+
+### Patch Changes
+
+- [#7461](https://github.com/thirdweb-dev/js/pull/7461) [`c7f7f48`](https://github.com/thirdweb-dev/js/commit/c7f7f4822283a4d85aa36a0f255bc147c87864dc) Thanks [@arcoraven](https://github.com/arcoraven)! - chore: data in webhook payload is an object
+
+## 0.10.1
+
+### Patch Changes
+
+- [#7444](https://github.com/thirdweb-dev/js/pull/7444) [`472e737`](https://github.com/thirdweb-dev/js/commit/472e737616312694f6c7df4876c90861d2edad94) Thanks [@arcoraven](https://github.com/arcoraven)! - chore: require webhook payload to be an array
+
+## 0.10.0
+
+### Minor Changes
+
+- [#7439](https://github.com/thirdweb-dev/js/pull/7439) [`c5f9921`](https://github.com/thirdweb-dev/js/commit/c5f9921dc9cf6c62d754f12ce6171d95bd87a590) Thanks [@arcoraven](https://github.com/arcoraven)! - feat: Add webhook producer to service-utils
+
+### Patch Changes
+
+- [#7440](https://github.com/thirdweb-dev/js/pull/7440) [`a2b737e`](https://github.com/thirdweb-dev/js/commit/a2b737e14493956dc888d94057e806bff77bacd2) Thanks [@arcoraven](https://github.com/arcoraven)! - fix: wrong casing on a field in webhook event helper
+
+## 0.9.14
+
+### Patch Changes
+
+- [#7382](https://github.com/thirdweb-dev/js/pull/7382) [`4c29886`](https://github.com/thirdweb-dev/js/commit/4c2988623fa58311ca854e849ae1872e9e48846d) Thanks [@arcoraven](https://github.com/arcoraven)! - chore: add dedicatedSupportChannel to TeamResponse
+
 ## 0.9.13
 
 ### Patch Changes

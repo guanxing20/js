@@ -6,9 +6,13 @@ import * as Bridge from "../../../../bridge/index.js";
 import type { Chain } from "../../../../chains/types.js";
 import type { BuyWithCryptoStatus } from "../../../../pay/buyWithCrypto/getStatus.js";
 import type { BuyWithFiatStatus } from "../../../../pay/buyWithFiat/getStatus.js";
+import type { PurchaseData } from "../../../../pay/types.js";
 import type { FiatProvider } from "../../../../pay/utils/commonTypes.js";
 import type { GaslessOptions } from "../../../../transaction/actions/gasless/types.js";
-import { sendTransaction } from "../../../../transaction/actions/send-transaction.js";
+import {
+  type SendTransactionOptions,
+  sendTransaction,
+} from "../../../../transaction/actions/send-transaction.js";
 import type { WaitForReceiptOptions } from "../../../../transaction/actions/wait-for-tx-receipt.js";
 import type { PreparedTransaction } from "../../../../transaction/prepare-transaction.js";
 import { getTransactionGasCost } from "../../../../transaction/utils.js";
@@ -65,7 +69,7 @@ export type SendTransactionPayModalConfig =
             testMode?: boolean;
             preferredProvider?: FiatProvider;
           };
-      purchaseData?: object;
+      purchaseData?: PurchaseData;
       /**
        * Callback to be called when the user successfully completes the purchase.
        */
@@ -131,7 +135,11 @@ export function useSendTransactionCore(args: {
   gasless?: GaslessOptions;
   wallet: Wallet | undefined;
   switchChain: (chain: Chain) => Promise<void>;
-}): UseMutationResult<WaitForReceiptOptions, Error, PreparedTransaction> {
+}): UseMutationResult<
+  WaitForReceiptOptions,
+  Error,
+  SendTransactionOptions["transaction"]
+> {
   const { showPayModal, gasless, wallet, switchChain } = args;
   let _account = wallet?.getAccount();
 
@@ -152,16 +160,16 @@ export function useSendTransactionCore(args: {
 
       if (!showPayModal) {
         trackPayEvent({
+          chainId: tx.chain.id,
           client: tx.client,
+          event: "pay_transaction_modal_disabled",
           walletAddress: account.address,
           walletType: wallet?.id,
-          chainId: tx.chain.id,
-          event: "pay_transaction_modal_disabled",
         });
         return sendTransaction({
-          transaction: tx,
           account,
           gasless,
+          transaction: tx,
         });
       }
 
@@ -169,9 +177,9 @@ export function useSendTransactionCore(args: {
         const sendTx = async () => {
           try {
             const res = await sendTransaction({
-              transaction: tx,
               account,
               gasless,
+              transaction: tx,
             });
 
             resolve(res);
@@ -179,12 +187,12 @@ export function useSendTransactionCore(args: {
             // Track insufficient funds errors specifically
             if (isInsufficientFundsError(e)) {
               trackInsufficientFundsError({
-                client: tx.client,
-                error: e,
-                walletAddress: account.address,
                 chainId: tx.chain.id,
+                client: tx.client,
                 contractAddress: await resolvePromisedValue(tx.to ?? undefined),
+                error: e,
                 transactionValue: await resolvePromisedValue(tx.value),
+                walletAddress: account.address,
               });
             }
 
@@ -204,15 +212,15 @@ export function useSendTransactionCore(args: {
 
             const [nativeBalance, erc20Balance, gasCost] = await Promise.all([
               getWalletBalance({
-                client: tx.client,
                 address: account.address,
                 chain: tx.chain,
+                client: tx.client,
               }),
               _erc20Value?.tokenAddress
                 ? getTokenBalance({
-                    client: tx.client,
                     account,
                     chain: tx.chain,
+                    client: tx.client,
                     tokenAddress: _erc20Value.tokenAddress,
                   })
                 : undefined,
@@ -237,11 +245,11 @@ export function useSendTransactionCore(args: {
               }).catch((err) => {
                 trackPayEvent({
                   client: tx.client,
+                  error: err?.message,
+                  event: "pay_transaction_modal_pay_api_error",
+                  toChainId: tx.chain.id,
                   walletAddress: account.address,
                   walletType: wallet?.id,
-                  toChainId: tx.chain.id,
-                  event: "pay_transaction_modal_pay_api_error",
-                  error: err?.message,
                 });
                 return null;
               });
@@ -253,24 +261,24 @@ export function useSendTransactionCore(args: {
                 // not a supported destination -> show deposit screen
                 trackPayEvent({
                   client: tx.client,
-                  walletAddress: account.address,
-                  walletType: wallet?.id,
-                  toChainId: tx.chain.id,
-                  toToken: _erc20Value?.tokenAddress || undefined,
-                  event: "pay_transaction_modal_chain_token_not_supported",
                   error: JSON.stringify({
                     chain: tx.chain.id,
-                    token: _erc20Value?.tokenAddress,
                     message: "chain/token not supported",
+                    token: _erc20Value?.tokenAddress,
                   }),
+                  event: "pay_transaction_modal_chain_token_not_supported",
+                  toChainId: tx.chain.id,
+                  toToken: _erc20Value?.tokenAddress || undefined,
+                  walletAddress: account.address,
+                  walletType: wallet?.id,
                 });
 
                 showPayModal({
                   mode: "deposit",
-                  tx,
-                  sendTx,
                   rejectTx: reject,
                   resolveTx: resolve,
+                  sendTx,
+                  tx,
                 });
                 return;
               }
@@ -278,19 +286,19 @@ export function useSendTransactionCore(args: {
               // chain is supported, show buy mode
               showPayModal({
                 mode: "buy",
-                tx,
-                sendTx,
                 rejectTx: reject,
                 resolveTx: resolve,
+                sendTx,
+                tx,
               });
             } else {
               trackPayEvent({
                 client: tx.client,
-                walletAddress: account.address,
-                walletType: wallet?.id,
+                event: "pay_transaction_modal_has_enough_funds",
                 toChainId: tx.chain.id,
                 toToken: _erc20Value?.tokenAddress || undefined,
-                event: "pay_transaction_modal_has_enough_funds",
+                walletAddress: account.address,
+                walletType: wallet?.id,
               });
               sendTx();
             }

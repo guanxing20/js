@@ -1,10 +1,10 @@
-import type { Account } from "@3rdweb-sdk/react/hooks/useApi";
 import Link from "next/link";
 import type React from "react";
 import type { ThirdwebClient } from "thirdweb";
-import { NotificationsButton } from "../../../../../@/components/blocks/notifications/notification-button";
-import { ResourcesDropdownButton } from "./ResourcesDropdownButton";
+import { NotificationsButton } from "@/components/notifications/notification-button";
+import type { Account } from "@/hooks/useApi";
 import { AccountButton } from "./account-button.client";
+import { ResourcesDropdownButton } from "./ResourcesDropdownButton";
 
 export function SecondaryNav(props: {
   account: Pick<Account, "email" | "id">;
@@ -19,11 +19,11 @@ export function SecondaryNav(props: {
       <div className="flex items-center gap-3">
         <NotificationsButton accountId={props.account.id} />
         <AccountButton
-          logout={props.logout}
-          connectButton={props.connectButton}
           account={props.account}
-          client={props.client}
           accountAddress={props.accountAddress}
+          client={props.client}
+          connectButton={props.connectButton}
+          logout={props.logout}
         />
       </div>
     </div>
@@ -36,28 +36,19 @@ export function SecondaryNavLinks() {
       <ResourcesDropdownButton />
 
       <Link
-        href="https://portal.thirdweb.com"
         className="text-muted-foreground text-sm hover:text-foreground"
-        target="_blank"
+        href="https://portal.thirdweb.com"
         rel="noopener noreferrer"
+        target="_blank"
       >
         Docs
       </Link>
 
       <Link
-        target="_blank"
-        href="/support"
         className="text-muted-foreground text-sm hover:text-foreground"
-        rel="noopener noreferrer"
-      >
-        Support
-      </Link>
-
-      <Link
-        target="_blank"
         href="https://feedback.thirdweb.com"
-        className="text-muted-foreground text-sm hover:text-foreground"
         rel="noopener noreferrer"
+        target="_blank"
       >
         Feedback
       </Link>

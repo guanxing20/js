@@ -1,35 +1,31 @@
-import { CopyTextButton } from "@/components/ui/CopyTextButton";
-import { Spinner } from "@/components/ui/Spinner/Spinner";
+import { createColumnHelper } from "@tanstack/react-table";
+import { format, formatDistanceToNowStrict } from "date-fns";
+import { ForwardIcon, RotateCcwIcon, TrashIcon } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
+import { TWTable } from "@/components/blocks/TWTable";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { FormItem } from "@/components/ui/form";
+import { CopyTextButton } from "@/components/ui/CopyTextButton";
+import { PlainTextCodeBlock } from "@/components/ui/code/plaintext-code";
+import { DynamicHeight } from "@/components/ui/DynamicHeight";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Spinner } from "@/components/ui/Spinner/Spinner";
+import { Skeleton } from "@/components/ui/skeleton";
+import { ToolTipLabel } from "@/components/ui/tooltip";
 import {
   type EngineWebhook,
   useEngineDeleteWebhook,
   useEngineTestWebhook,
-} from "@3rdweb-sdk/react/hooks/useEngine";
-import {
-  Flex,
-  FormControl,
-  Modal,
-  ModalBody,
-  ModalCloseButton,
-  ModalContent,
-  ModalFooter,
-  ModalHeader,
-  ModalOverlay,
-  Tooltip,
-  type UseDisclosureReturn,
-  useDisclosure,
-} from "@chakra-ui/react";
-import { createColumnHelper } from "@tanstack/react-table";
-import { TWTable } from "components/shared/TWTable";
-import { format, formatDistanceToNowStrict } from "date-fns";
-import { MailQuestionIcon, TrashIcon } from "lucide-react";
-import { useState } from "react";
-import { toast } from "sonner";
-import { Card, FormLabel, Text } from "tw-components";
-import { shortenString } from "utils/usedapp-external";
+} from "@/hooks/useEngine";
+import { parseError } from "@/utils/errorParser";
+import { shortenString } from "@/utils/usedapp-external";
 
 export function beautifyString(str: string): string {
   return str
@@ -38,55 +34,57 @@ export function beautifyString(str: string): string {
     .join(" ");
 }
 
-interface WebhooksTableProps {
-  instanceUrl: string;
-  webhooks: EngineWebhook[];
-  isPending: boolean;
-  isFetched: boolean;
-  authToken: string;
-}
-
 const columnHelper = createColumnHelper<EngineWebhook>();
 
 const columns = [
   columnHelper.accessor("name", {
-    header: "Name",
     cell: (cell) => {
-      return <Text>{cell.getValue()}</Text>;
+      return (
+        <span className="text-foreground">{cell.getValue() || "N/A"}</span>
+      );
     },
+    header: "Name",
   }),
   columnHelper.accessor("eventType", {
-    header: "Event Type",
     cell: (cell) => {
-      return <Text>{beautifyString(cell.getValue())}</Text>;
+      return (
+        <Badge
+          variant="outline"
+          className="py-1 text-sm font-normal bg-background"
+        >
+          {beautifyString(cell.getValue())}
+        </Badge>
+      );
     },
+    header: "Event Type",
   }),
   columnHelper.accessor("secret", {
-    header: "Secret",
     cell: (cell) => {
       return (
         <CopyTextButton
+          copyIconPosition="right"
           textToCopy={cell.getValue() || ""}
           textToShow={shortenString(cell.getValue() || "")}
           tooltip="Secret"
-          copyIconPosition="right"
+          variant="ghost"
+          className="-translate-x-2 text-muted-foreground font-mono"
         />
       );
     },
+    header: "Secret",
   }),
   columnHelper.accessor("url", {
-    header: "URL",
     cell: (cell) => {
       const url = cell.getValue();
       return (
-        <Text maxW={300} isTruncated>
+        <span className="text-foreground truncate max-w-[300px] block">
           {url}
-        </Text>
+        </span>
       );
     },
+    header: "URL",
   }),
   columnHelper.accessor("createdAt", {
-    header: "Created At",
     cell: (cell) => {
       const value = cell.getValue();
       if (!value) {
@@ -95,183 +93,218 @@ const columns = [
 
       const date = new Date(value);
       return (
-        <Tooltip
-          borderRadius="md"
-          bg="transparent"
-          boxShadow="none"
-          label={
-            <Card bgColor="backgroundHighlight">
-              <Text>{format(date, "PP pp z")}</Text>
-            </Card>
-          }
-          shouldWrapChildren
-        >
-          <Text>{formatDistanceToNowStrict(date, { addSuffix: true })}</Text>
-        </Tooltip>
+        <ToolTipLabel label={format(date, "PP pp z")}>
+          <span className="text-foreground cursor-help">
+            {formatDistanceToNowStrict(date, { addSuffix: true })}
+          </span>
+        </ToolTipLabel>
       );
     },
+    header: "Created At",
   }),
 ];
 
-export const WebhooksTable: React.FC<WebhooksTableProps> = ({
+export function WebhooksTable({
   instanceUrl,
   webhooks,
   isPending,
   isFetched,
   authToken,
-}) => {
+}: {
+  instanceUrl: string;
+  webhooks: EngineWebhook[];
+  isPending: boolean;
+  isFetched: boolean;
+  authToken: string;
+}) {
   const [selectedWebhook, setSelectedWebhook] = useState<EngineWebhook>();
-  const deleteDisclosure = useDisclosure();
-  const testDisclosure = useDisclosure();
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [testDialogOpen, setTestDialogOpen] = useState(false);
 
   const activeWebhooks = webhooks.filter((webhook) => webhook.active);
 
   return (
     <>
       <TWTable
-        title="webhooks"
-        data={activeWebhooks}
         columns={columns}
-        isPending={isPending}
+        data={activeWebhooks}
         isFetched={isFetched}
+        isPending={isPending}
         onMenuClick={[
           {
-            icon: <MailQuestionIcon className="size-4" />,
-            text: "Test webhook",
+            icon: <ForwardIcon className="size-4" />,
             onClick: (row) => {
               setSelectedWebhook(row);
-              testDisclosure.onOpen();
+              setTestDialogOpen(true);
             },
+            text: "Test webhook",
           },
           {
             icon: <TrashIcon className="size-4" />,
-            text: "Delete",
+            isDestructive: true,
             onClick: (row) => {
               setSelectedWebhook(row);
-              deleteDisclosure.onOpen();
+              setDeleteDialogOpen(true);
             },
-            isDestructive: true,
+            text: "Delete",
           },
         ]}
+        title="webhooks"
       />
 
-      {selectedWebhook && deleteDisclosure.isOpen && (
-        <DeleteWebhookModal
-          webhook={selectedWebhook}
-          disclosure={deleteDisclosure}
-          instanceUrl={instanceUrl}
+      {selectedWebhook && (
+        <DeleteWebhookDialog
           authToken={authToken}
+          instanceUrl={instanceUrl}
+          webhook={selectedWebhook}
+          open={deleteDialogOpen}
+          onOpenChange={setDeleteDialogOpen}
         />
       )}
-      {selectedWebhook && testDisclosure.isOpen && (
-        <TestWebhookModal
-          webhook={selectedWebhook}
-          disclosure={testDisclosure}
-          instanceUrl={instanceUrl}
+      {selectedWebhook && (
+        <TestWebhookDialog
           authToken={authToken}
+          instanceUrl={instanceUrl}
+          webhook={selectedWebhook}
+          open={testDialogOpen}
+          onOpenChange={setTestDialogOpen}
         />
       )}
     </>
   );
-};
-
-interface DeleteWebhookModalProps {
-  webhook: EngineWebhook;
-  disclosure: UseDisclosureReturn;
-  instanceUrl: string;
-  authToken: string;
 }
-function DeleteWebhookModal({
+
+function DeleteWebhookDialog({
   webhook,
-  disclosure,
   instanceUrl,
   authToken,
-}: DeleteWebhookModalProps) {
+  open,
+  onOpenChange,
+}: {
+  webhook: EngineWebhook;
+  instanceUrl: string;
+  authToken: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
   const deleteWebhook = useEngineDeleteWebhook({
     authToken,
     instanceUrl,
   });
 
-  const onDelete = () => {
-    const promise = deleteWebhook.mutateAsync(
+  const onDelete = async () => {
+    await deleteWebhook.mutateAsync(
       { id: webhook.id },
       {
-        onSuccess: () => {
-          disclosure.onClose();
-        },
         onError: (error) => {
-          console.error(error);
+          toast.error("Failed to delete webhook", {
+            description: parseError(error),
+          });
+        },
+        onSuccess: () => {
+          onOpenChange(false);
+          toast.success("Webhook deleted successfully");
         },
       },
     );
-
-    toast.promise(promise, {
-      success: "Successfully deleted webhook.",
-      error: "Failed to delete webhook.",
-    });
   };
 
   return (
-    <Modal isOpen={disclosure.isOpen} onClose={disclosure.onClose} isCentered>
-      <ModalOverlay />
-      <ModalContent className="!bg-background rounded-lg border border-border">
-        <ModalHeader>Delete Webhook</ModalHeader>
-        <ModalCloseButton />
-        <ModalBody>
-          <div className="flex flex-col gap-4">
-            <Text>Are you sure you want to delete this webhook?</Text>
-            <FormControl>
-              <FormLabel>Name</FormLabel>
-              <Text>{webhook.name}</Text>
-            </FormControl>
-            <FormControl>
-              <FormLabel>URL</FormLabel>
-              <Text>{webhook.url}</Text>
-            </FormControl>
-            <FormControl>
-              <FormLabel>Created at</FormLabel>
-              <Text>
-                {format(new Date(webhook.createdAt ?? ""), "PP pp z")}
-              </Text>
-            </FormControl>
-          </div>
-        </ModalBody>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="p-0 gap-0 overflow-hidden">
+        <DialogHeader className="p-4 lg:p-6">
+          <DialogTitle>Delete Webhook</DialogTitle>
+          <DialogDescription>
+            Are you sure you want to delete this webhook?
+          </DialogDescription>
+        </DialogHeader>
 
-        <ModalFooter as={Flex} gap={3}>
-          <Button onClick={disclosure.onClose} variant="outline">
+        <div className="space-y-4 px-4 lg:px-6 pb-8 overflow-hidden">
+          <div className="space-y-1">
+            <h3 className="text-sm font-medium text-foreground">Name</h3>
+            <span className="text-foreground text-sm">
+              {webhook.name || "N/A"}
+            </span>
+          </div>
+          <div className="space-y-1">
+            <h3 className="text-sm font-medium text-foreground">URL</h3>
+            <p className="text-foreground text-sm truncate">{webhook.url}</p>
+          </div>
+          <div className="space-y-1">
+            <h3 className="text-sm font-medium text-foreground">Created at</h3>
+            <span className="text-foreground text-sm">
+              {format(new Date(webhook.createdAt ?? ""), "PP pp z")}
+            </span>
+          </div>
+        </div>
+
+        <div className="flex gap-3 p-4 lg:p-6 bg-card border-t border-border justify-end ">
+          <Button onClick={() => onOpenChange(false)} variant="outline">
             Cancel
           </Button>
-          <Button type="submit" variant="destructive" onClick={onDelete}>
+          <Button
+            onClick={onDelete}
+            type="submit"
+            variant="destructive"
+            disabled={deleteWebhook.isPending}
+            className="gap-2"
+          >
+            {deleteWebhook.isPending && <Spinner className="size-4" />}
             Delete
           </Button>
-        </ModalFooter>
-      </ModalContent>
-    </Modal>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
-interface TestWebhookModalProps {
-  webhook: EngineWebhook;
-  disclosure: UseDisclosureReturn;
-  instanceUrl: string;
-  authToken: string;
-}
-function TestWebhookModal({
+function TestWebhookDialog({
   webhook,
-  disclosure,
   instanceUrl,
   authToken,
-}: TestWebhookModalProps) {
-  const { mutate: testWebhook, isPending } = useEngineTestWebhook({
-    instanceUrl,
+  open,
+  onOpenChange,
+}: {
+  webhook: EngineWebhook;
+  instanceUrl: string;
+  authToken: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="gap-0 p-0 overflow-hidden">
+        <DialogHeader className="p-4 lg:p-6">
+          <DialogTitle>Test Webhook</DialogTitle>
+        </DialogHeader>
+
+        <TestWebhookDialogContent
+          authToken={authToken}
+          instanceUrl={instanceUrl}
+          webhook={webhook}
+        />
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function TestWebhookDialogContent(props: {
+  webhook: EngineWebhook;
+  instanceUrl: string;
+  authToken: string;
+}) {
+  const { webhook, instanceUrl, authToken } = props;
+
+  const testWebhook = useEngineTestWebhook({
     authToken,
+    instanceUrl,
   });
 
   const [status, setStatus] = useState<number | undefined>();
   const [body, setBody] = useState<string | undefined>();
 
   const onTest = () => {
-    testWebhook(
+    testWebhook.mutate(
       { id: webhook.id },
       {
         onSuccess: (result) => {
@@ -283,36 +316,55 @@ function TestWebhookModal({
   };
 
   return (
-    <Modal isOpen={disclosure.isOpen} onClose={disclosure.onClose} isCentered>
-      <ModalOverlay />
-      <ModalContent className="!bg-background rounded-lg border border-border">
-        <ModalHeader>Test Webhook</ModalHeader>
-        <ModalCloseButton />
-        <ModalBody>
-          <div className="flex flex-col gap-4 pb-2">
-            <FormItem>
-              <FormLabel>URL</FormLabel>
-              <span className="font-mono">{webhook.url}</span>
-            </FormItem>
-
-            <Button type="submit" onClick={onTest} disabled={isPending}>
-              {isPending && <Spinner className="mr-2 size-4" />}
-              Send Request
-            </Button>
-
-            {status && (
-              <div>
-                <Badge variant={status <= 299 ? "success" : "destructive"}>
-                  {status}
-                </Badge>
-              </div>
-            )}
-            <div className="max-h-[12rem] overflow-y-auto font-mono text-sm">
-              {body ?? "Send a request to see the response."}
-            </div>
+    <DynamicHeight>
+      <div className="overflow-hidden">
+        <div className="space-y-4 px-4 lg:px-6">
+          <div className="space-y-1">
+            <h3 className="text-sm font-medium text-foreground">URL</h3>
+            {/* <span className="font-mono text-foreground">{webhook.url}</span> */}
+            <PlainTextCodeBlock code={webhook.url} />
           </div>
-        </ModalBody>
-      </ModalContent>
-    </Modal>
+
+          {body && !testWebhook.isPending && (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-medium text-foreground">
+                  Response
+                </h3>
+                {status && (
+                  <Badge variant={status <= 299 ? "success" : "destructive"}>
+                    {status}
+                  </Badge>
+                )}
+              </div>
+              <PlainTextCodeBlock
+                code={body}
+                scrollableClassName="max-h-[300px]"
+              />
+            </div>
+          )}
+
+          {testWebhook.isPending && <Skeleton className="h-32 w-full" />}
+        </div>
+
+        <div className="flex justify-end p-4 lg:p-6 bg-card border-t border-border mt-8">
+          <Button
+            disabled={testWebhook.isPending}
+            onClick={onTest}
+            type="submit"
+            className="gap-2"
+          >
+            {testWebhook.isPending ? (
+              <Spinner className="size-4" />
+            ) : body ? (
+              <RotateCcwIcon className="size-4" />
+            ) : (
+              <ForwardIcon className="size-4" />
+            )}
+            {body ? "Send again" : "Send request"}
+          </Button>
+        </div>
+      </div>
+    </DynamicHeight>
   );
 }

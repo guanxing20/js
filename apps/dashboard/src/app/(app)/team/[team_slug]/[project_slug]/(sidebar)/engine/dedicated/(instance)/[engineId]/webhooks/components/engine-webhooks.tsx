@@ -1,49 +1,49 @@
 "use client";
 
-import { useEngineWebhooks } from "@3rdweb-sdk/react/hooks/useEngine";
-import { Heading, Link, Text } from "tw-components";
+import { UnderlineLink } from "@/components/ui/UnderlineLink";
+import { useEngineWebhooks } from "@/hooks/useEngine";
 import { AddWebhookButton } from "./add-webhook-button";
 import { WebhooksTable } from "./webhooks-table";
 
-interface EngineWebhooksProps {
-  instanceUrl: string;
-  authToken: string;
-}
-
-export const EngineWebhooks: React.FC<EngineWebhooksProps> = ({
+export function EngineWebhooks({
   instanceUrl,
   authToken,
-}) => {
+}: {
+  instanceUrl: string;
+  authToken: string;
+}) {
   const webhooks = useEngineWebhooks({
     authToken,
     instanceUrl,
   });
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-2">
-        <Heading size="title.md">Webhooks</Heading>
-        <Text>
-          Notify your app backend when transaction and backend wallet events
-          occur.{" "}
-          <Link
-            href="https://portal.thirdweb.com/infrastructure/engine/features/webhooks"
-            color="primary.500"
-            isExternal
-          >
-            Learn more about webhooks
-          </Link>
-          .
-        </Text>
-      </div>
+    <div>
+      <h2 className="text-2xl tracking-tight font-semibold mb-1">Webhooks</h2>
+      <p className="text-muted-foreground mb-4 text-sm">
+        Notify your app backend when transaction and backend wallet events
+        occur.{" "}
+        <UnderlineLink
+          href="https://portal.thirdweb.com/infrastructure/engine/features/webhooks"
+          rel="noopener noreferrer"
+          target="_blank"
+        >
+          Learn more about webhooks
+        </UnderlineLink>
+        .
+      </p>
+
       <WebhooksTable
-        instanceUrl={instanceUrl}
-        webhooks={webhooks.data || []}
-        isPending={webhooks.isPending}
-        isFetched={webhooks.isFetched}
         authToken={authToken}
+        instanceUrl={instanceUrl}
+        isFetched={webhooks.isFetched}
+        isPending={webhooks.isPending}
+        webhooks={webhooks.data || []}
       />
-      <AddWebhookButton instanceUrl={instanceUrl} authToken={authToken} />
+
+      <div className="mt-4 flex justify-end">
+        <AddWebhookButton authToken={authToken} instanceUrl={instanceUrl} />
+      </div>
     </div>
   );
-};
+}

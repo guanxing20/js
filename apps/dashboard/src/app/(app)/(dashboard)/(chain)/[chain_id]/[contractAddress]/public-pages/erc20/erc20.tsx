@@ -1,15 +1,19 @@
 import type { ThirdwebContract } from "thirdweb";
-import {} from "thirdweb";
 import type { ChainMetadata } from "thirdweb/chains";
 import { getContractMetadata } from "thirdweb/extensions/common";
 import { decimals, getActiveClaimCondition } from "thirdweb/extensions/erc20";
+import { GridPattern } from "@/components/ui/background-patterns";
+import { resolveFunctionSelectors } from "@/lib/selectors";
+import { getContractCreator } from "../_components/getContractCreator";
 import { PageHeader } from "../_components/PageHeader";
+import { getTokenPriceData } from "./_apis/token-price-data";
 import { ContractHeaderUI } from "./_components/ContractHeader";
+import { TokenDropClaim } from "./_components/claim-tokens/claim-tokens-ui";
+import { ContractAnalyticsOverview } from "./_components/contract-analytics/contract-analytics";
 import { BuyTokenEmbed } from "./_components/PayEmbedSection";
 import { TokenStats } from "./_components/PriceChart";
 import { RecentTransfers } from "./_components/RecentTransfers";
-import { TokenDropClaim } from "./_components/claim-tokens/claim-tokens-ui";
-import { ContractAnalyticsOverview } from "./_components/contract-analytics/contract-analytics";
+import { fetchTokenInfoFromBridge } from "./_utils/fetch-coin-info";
 import { getCurrencyMeta } from "./_utils/getCurrencyMeta";
 
 export async function ERC20PublicPage(props: {
@@ -17,34 +21,52 @@ export async function ERC20PublicPage(props: {
   clientContract: ThirdwebContract;
   chainMetadata: ChainMetadata;
 }) {
-  const [contractMetadata, activeClaimCondition, tokenDecimals] =
-    await Promise.all([
-      getContractMetadata({
-        contract: props.serverContract,
-      }),
-      getActiveClaimConditionWithErrorHandler(props.serverContract),
-      decimals({
-        contract: props.serverContract,
-      }),
-    ]);
+  const [
+    contractMetadata,
+    activeClaimCondition,
+    tokenDecimals,
+    tokenInfo,
+    functionSelectors,
+    tokenPriceData,
+  ] = await Promise.all([
+    getContractMetadata({
+      contract: props.serverContract,
+    }),
+    getActiveClaimConditionWithErrorHandler(props.serverContract),
+    decimals({
+      contract: props.serverContract,
+    }),
+    fetchTokenInfoFromBridge({
+      chainId: props.serverContract.chain.id,
+      clientId: props.clientContract.client.clientId,
+      tokenAddress: props.serverContract.address,
+    }),
+    resolveFunctionSelectors(props.serverContract),
+    getTokenPriceData({
+      chainId: props.serverContract.chain.id,
+      contractAddress: props.serverContract.address,
+    }),
+  ]);
 
-  const claimConditionCurrencyMeta = activeClaimCondition
-    ? await getCurrencyMeta({
-        currencyAddress: activeClaimCondition.currency,
-        chainMetadata: props.chainMetadata,
-        chain: props.serverContract.chain,
-        client: props.serverContract.client,
-      }).catch(() => undefined)
-    : undefined;
+  if (!contractMetadata.image && tokenInfo) {
+    contractMetadata.image = tokenInfo.iconUri;
+  }
+
+  const [contractCreator, claimConditionCurrencyMeta] = await Promise.all([
+    getContractCreator(props.serverContract, functionSelectors),
+    activeClaimCondition
+      ? getCurrencyMeta({
+          chain: props.serverContract.chain,
+          chainMetadata: props.chainMetadata,
+          client: props.serverContract.client,
+          currencyAddress: activeClaimCondition.currency,
+        }).catch(() => undefined)
+      : undefined,
+  ]);
 
   const buyEmbed = (
     <BuyEmbed
-      clientContract={props.clientContract}
       chainMetadata={props.chainMetadata}
-      tokenDecimals={tokenDecimals}
-      tokenName={contractMetadata.name}
-      tokenSymbol={contractMetadata.symbol}
-      tokenAddress={props.clientContract.address}
       claimConditionMeta={
         activeClaimCondition && claimConditionCurrencyMeta
           ? {
@@ -53,66 +75,83 @@ export async function ERC20PublicPage(props: {
             }
           : undefined
       }
+      clientContract={props.clientContract}
+      tokenAddress={props.clientContract.address}
+      tokenDecimals={tokenDecimals}
+      tokenName={contractMetadata.name}
+      tokenSymbol={contractMetadata.symbol}
     />
   );
 
   return (
     <div className="flex grow flex-col">
-      <PageHeader />
-      <div className="container flex max-w-8xl grow flex-col">
-        <ContractHeaderUI
-          chainMetadata={props.chainMetadata}
-          clientContract={props.clientContract}
-          image={contractMetadata.image}
-          name={contractMetadata.name}
-          symbol={contractMetadata.symbol}
-          socialUrls={
-            typeof contractMetadata.social_urls === "object" &&
-            contractMetadata.social_urls !== null
-              ? contractMetadata.social_urls
-              : {}
-          }
-        />
+      <PageHeader containerClassName="max-w-5xl" />
 
-        <div className="h-6" />
+      <div className="border-b">
+        <div className="container max-w-5xl">
+          <ContractHeaderUI
+            chainMetadata={props.chainMetadata}
+            clientContract={props.clientContract}
+            contractCreator={contractCreator}
+            image={contractMetadata.image}
+            name={contractMetadata.name}
+            socialUrls={
+              typeof contractMetadata.social_urls === "object" &&
+              contractMetadata.social_urls !== null
+                ? contractMetadata.social_urls
+                : {}
+            }
+            symbol={contractMetadata.symbol}
+          />
+        </div>
+      </div>
 
-        <div className="flex flex-col gap-8 pb-20 xl:flex-row">
-          <div className="flex grow flex-col gap-8 overflow-hidden">
-            {activeClaimCondition ? (
-              <div className="border-b border-dashed pb-6">
-                <ContractAnalyticsOverview
-                  contractAddress={props.clientContract.address}
-                  chainId={props.chainMetadata.chainId}
-                  chainSlug={props.chainMetadata.slug}
-                />
-              </div>
-            ) : (
+      <div className="container flex max-w-5xl grow flex-col pt-8 pb-10">
+        <div className="flex grow flex-col gap-8">
+          <div className="sm:flex sm:justify-center w-full sm:border sm:border-dashed sm:bg-accent/20 sm:py-12 rounded-lg overflow-hidden relative">
+            <GridPattern
+              width={30}
+              height={30}
+              x={-1}
+              y={-1}
+              strokeDasharray={"4 2"}
+              className="text-border dark:text-border/70"
+              style={{
+                maskImage:
+                  "linear-gradient(to bottom right,white,transparent,transparent)",
+              }}
+            />
+            <div className="sm:w-[420px] z-10">{buyEmbed}</div>
+          </div>
+
+          {tokenPriceData ? (
+            <>
               <TokenStats
                 chainId={props.chainMetadata.chainId}
                 contractAddress={props.clientContract.address}
+                tokenPriceData={tokenPriceData}
               />
-            )}
 
-            <div className="xl:hidden">{buyEmbed}</div>
-
-            <RecentTransfers
-              clientContract={props.clientContract}
-              tokenSymbol={contractMetadata.symbol}
-              chainMetadata={props.chainMetadata}
-              decimals={tokenDecimals}
-            />
-
-            {!activeClaimCondition && (
               <ContractAnalyticsOverview
-                contractAddress={props.clientContract.address}
                 chainId={props.chainMetadata.chainId}
                 chainSlug={props.chainMetadata.slug}
+                contractAddress={props.clientContract.address}
               />
-            )}
-          </div>
-          <div className="hidden xl:block xl:w-96">
-            <div className="-mt-6 sticky top-0 pt-6">{buyEmbed}</div>
-          </div>
+            </>
+          ) : (
+            <ContractAnalyticsOverview
+              chainId={props.chainMetadata.chainId}
+              chainSlug={props.chainMetadata.slug}
+              contractAddress={props.clientContract.address}
+            />
+          )}
+
+          <RecentTransfers
+            chainMetadata={props.chainMetadata}
+            clientContract={props.clientContract}
+            decimals={tokenDecimals}
+            tokenSymbol={contractMetadata.symbol}
+          />
         </div>
       </div>
     </div>
@@ -139,10 +178,8 @@ function BuyEmbed(props: {
   if (!props.claimConditionMeta) {
     return (
       <BuyTokenEmbed
-        client={props.clientContract.client}
         chain={props.clientContract.chain}
-        tokenSymbol={props.tokenSymbol}
-        tokenName={props.tokenName}
+        client={props.clientContract.client}
         tokenAddress={props.clientContract.address}
       />
     );
@@ -150,13 +187,13 @@ function BuyEmbed(props: {
 
   return (
     <TokenDropClaim
+      chainMetadata={props.chainMetadata}
+      claimCondition={props.claimConditionMeta.activeClaimCondition}
+      claimConditionCurrency={props.claimConditionMeta.claimConditionCurrency}
       contract={props.clientContract}
       decimals={props.tokenDecimals}
       name={props.tokenName}
       symbol={props.tokenSymbol}
-      chainMetadata={props.chainMetadata}
-      claimCondition={props.claimConditionMeta.activeClaimCondition}
-      claimConditionCurrency={props.claimConditionMeta.claimConditionCurrency}
     />
   );
 }

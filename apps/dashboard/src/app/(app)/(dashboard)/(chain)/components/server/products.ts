@@ -1,69 +1,69 @@
-import type { ChainSupportedService } from "../../types/chain";
-import { ConnectSDKIcon } from "./icons/ConnectSDKIcon";
-import { ContractIcon } from "./icons/ContractIcon";
-import { EngineIcon } from "./icons/EngineIcon";
-import { InsightIcon } from "./icons/InsightIcon";
-import { NebulaIcon } from "./icons/NebulaIcon";
-import { PayIcon } from "./icons/PayIcon";
-import { RPCIcon } from "./icons/RPCIcon";
-import { SmartAccountIcon } from "./icons/SmartAccountIcon";
+import { ConnectSDKIcon } from "@/icons/ConnectSDKIcon";
+import { ContractIcon } from "@/icons/ContractIcon";
+import { EngineIcon } from "@/icons/EngineIcon";
+import { InsightIcon } from "@/icons/InsightIcon";
+import { NebulaIcon } from "@/icons/NebulaIcon";
+import { PayIcon } from "@/icons/PayIcon";
+import { RPCIcon } from "@/icons/RPCIcon";
+import { SmartAccountIcon } from "@/icons/SmartAccountIcon";
+import type { ChainSupportedService } from "@/types/chain";
 
 export const products = [
   {
-    name: "Contracts",
-    id: "contracts",
+    description: "Create, deploy and manage smart contracts",
     icon: ContractIcon,
-    description: "Pre-built contracts & deployment tools",
+    id: "contracts",
     link: "https://thirdweb.com/explore",
+    name: "Contracts",
   },
   {
-    name: "Connect SDK",
-    id: "connect-sdk",
+    description: "Create and manage crypto wallets",
     icon: ConnectSDKIcon,
-    description: "Client-side SDKs for wallets and blockchain interactions",
+    id: "connect-sdk",
     link: "https://thirdweb.com/connect",
+    name: "Wallets",
   },
   {
-    name: "RPC Edge",
-    id: "rpc-edge",
-    icon: RPCIcon,
     description: "Performant and scalable RPC service",
+    icon: RPCIcon,
+    id: "rpc-edge",
     link: "https://portal.thirdweb.com/infrastructure/rpc-edge/overview",
+    name: "RPC Edge",
   },
   {
-    name: "Engine",
-    id: "engine",
-    icon: EngineIcon,
     description: "Backend server that reads, writes, and deploys contracts",
+    icon: EngineIcon,
+    id: "engine",
     link: "https://thirdweb.com/engine",
+    name: "Transactions",
   },
   {
-    name: "Account Abstraction",
-    id: "account-abstraction",
+    description: "Enable gas sponsorship for seamless transactions",
     icon: SmartAccountIcon,
-    description: "Account factory contracts, bundler & paymaster",
-    link: "https://portal.thirdweb.com/connect/account-abstraction/overview",
+    id: "account-abstraction",
+    link: "https://portal.thirdweb.com/wallets/sponsor-gas",
+    name: "Account Abstraction",
   },
   {
-    name: "Universal Bridge",
-    id: "pay",
+    description: "Enable payments in any token on any chain",
     icon: PayIcon,
-    description: "Point of sale solution for bridging, onramping & swapping",
-    link: "https://portal.thirdweb.com/connect/pay/overview",
+    id: "pay",
+    link: "https://portal.thirdweb.com/payments",
+    name: "Payments",
   },
   {
-    name: "Insight",
-    id: "insight",
+    description: "Query and analyze blockchain data",
     icon: InsightIcon,
-    description: "Query, transform and analyze blockchain data",
+    id: "insight",
     link: "https://thirdweb.com/insight",
+    name: "Insight",
   },
   {
-    name: "Nebula",
-    id: "nebula",
-    icon: NebulaIcon,
     description: "The most powerful AI for interacting with the blockchain",
+    icon: NebulaIcon,
+    id: "nebula",
     link: "https://thirdweb.com/nebula",
+    name: "Nebula",
   },
 ] satisfies Array<{
   name: string;

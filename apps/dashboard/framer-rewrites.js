@@ -9,17 +9,20 @@ module.exports = [
   // -- build category
   "/wallets",
   "/account-abstraction",
-  "/universal-bridge",
+  "/payments",
   "/auth",
   "/in-app-wallets",
   "/transactions",
   // -- end build category
-  // -- storage
+
+  // -- scale category
+  "/rpc",
+  "/insight",
   "/storage",
+  // -- end scale category
+
   // -- nebula
   "/nebula",
-  // --insight
-  "/insight",
   // -- contracts
   "/contracts",
   "/contracts/modular-contracts",
@@ -59,4 +62,6 @@ module.exports = [
   // -- universal bridge landing pages --
   "/universal-bridge-regions/:region_slug",
   "/enterprise",
+  "/token",
+  "/vault",
 ];

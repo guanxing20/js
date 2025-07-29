@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
+import { createThirdwebClient } from "../../client/client.js";
 import type { Theme } from "../../react/core/design-system/index.js";
 import { ErrorBanner } from "../../react/web/ui/Bridge/ErrorBanner.js";
 import { ModalThemeWrapper } from "../utils.js";
@@ -25,39 +26,42 @@ const ErrorBannerWithTheme = (props: ErrorBannerWithThemeProps) => {
   const { theme, ...componentProps } = props;
   return (
     <ModalThemeWrapper theme={theme}>
-      <ErrorBanner {...componentProps} />
+      <ErrorBanner
+        client={createThirdwebClient({ clientId: "test" })}
+        {...componentProps}
+      />
     </ModalThemeWrapper>
   );
 };
 
 const meta = {
-  title: "Bridge/ErrorBanner",
+  args: {
+    error: mockNetworkError,
+    onCancel: () => {},
+    onRetry: () => {},
+    theme: "dark",
+  },
+  argTypes: {
+    onCancel: { action: "cancel clicked" },
+    onRetry: { action: "retry clicked" },
+    theme: {
+      control: "select",
+      description: "Theme for the component",
+      options: ["light", "dark"],
+    },
+  },
   component: ErrorBannerWithTheme,
   parameters: {
-    layout: "centered",
     docs: {
       description: {
         component:
           "Error banner component that displays user-friendly error messages with retry functionality and optional cancel action.",
       },
     },
+    layout: "centered",
   },
   tags: ["autodocs"],
-  args: {
-    error: mockNetworkError,
-    onRetry: () => {},
-    onCancel: () => {},
-    theme: "dark",
-  },
-  argTypes: {
-    theme: {
-      control: "select",
-      options: ["light", "dark"],
-      description: "Theme for the component",
-    },
-    onRetry: { action: "retry clicked" },
-    onCancel: { action: "cancel clicked" },
-  },
+  title: "Bridge/ErrorBanner",
 } satisfies Meta<typeof ErrorBannerWithTheme>;
 
 export default meta;
@@ -83,8 +87,8 @@ export const Dark: Story = {
 
 export const NetworkError: Story = {
   args: {
-    theme: "dark",
     error: mockNetworkError,
+    theme: "dark",
   },
   parameters: {
     backgrounds: { default: "dark" },
@@ -93,8 +97,8 @@ export const NetworkError: Story = {
 
 export const NetworkErrorLight: Story = {
   args: {
-    theme: "light",
     error: mockNetworkError,
+    theme: "light",
   },
   parameters: {
     backgrounds: { default: "light" },
@@ -103,8 +107,8 @@ export const NetworkErrorLight: Story = {
 
 export const UserRejectedError: Story = {
   args: {
-    theme: "dark",
     error: mockUserRejectedError,
+    theme: "dark",
   },
   parameters: {
     backgrounds: { default: "dark" },
@@ -113,8 +117,8 @@ export const UserRejectedError: Story = {
 
 export const UserRejectedErrorLight: Story = {
   args: {
-    theme: "light",
     error: mockUserRejectedError,
+    theme: "light",
   },
   parameters: {
     backgrounds: { default: "light" },
@@ -123,8 +127,8 @@ export const UserRejectedErrorLight: Story = {
 
 export const InsufficientFundsError: Story = {
   args: {
-    theme: "dark",
     error: mockInsufficientFundsError,
+    theme: "dark",
   },
   parameters: {
     backgrounds: { default: "dark" },
@@ -133,8 +137,8 @@ export const InsufficientFundsError: Story = {
 
 export const InsufficientFundsErrorLight: Story = {
   args: {
-    theme: "light",
     error: mockInsufficientFundsError,
+    theme: "light",
   },
   parameters: {
     backgrounds: { default: "light" },
@@ -143,9 +147,9 @@ export const InsufficientFundsErrorLight: Story = {
 
 export const WithoutCancelButton: Story = {
   args: {
-    theme: "dark",
     error: mockGenericError,
     onCancel: undefined,
+    theme: "dark",
   },
   parameters: {
     backgrounds: { default: "dark" },
@@ -154,9 +158,9 @@ export const WithoutCancelButton: Story = {
 
 export const WithoutCancelButtonLight: Story = {
   args: {
-    theme: "light",
     error: mockGenericError,
     onCancel: undefined,
+    theme: "light",
   },
   parameters: {
     backgrounds: { default: "light" },
@@ -165,8 +169,8 @@ export const WithoutCancelButtonLight: Story = {
 
 export const EmptyMessage: Story = {
   args: {
-    theme: "dark",
     error: new Error(""),
+    theme: "dark",
   },
   parameters: {
     backgrounds: { default: "dark" },
@@ -175,8 +179,8 @@ export const EmptyMessage: Story = {
 
 export const EmptyMessageLight: Story = {
   args: {
-    theme: "light",
     error: new Error(""),
+    theme: "light",
   },
   parameters: {
     backgrounds: { default: "light" },

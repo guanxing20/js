@@ -1,14 +1,17 @@
 "use client";
 import { CheckIcon } from "@radix-ui/react-icons";
+import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
+import { trackPayEvent } from "../../../../../analytics/track/pay.js";
+import type { ThirdwebClient } from "../../../../../client/client.js";
 import type { WindowAdapter } from "../../../../core/adapters/WindowAdapter.js";
 import { useCustomTheme } from "../../../../core/design-system/CustomThemeProvider.js";
 import { iconSize } from "../../../../core/design-system/index.js";
 import type { BridgePrepareResult } from "../../../../core/hooks/useBridgePrepare.js";
 import type { CompletedStatusResult } from "../../../../core/hooks/useStepExecutor.js";
-import { Spacer } from "../../components/Spacer.js";
 import { Container, ModalHeader } from "../../components/basic.js";
 import { Button } from "../../components/buttons.js";
+import { Spacer } from "../../components/Spacer.js";
 import { Text } from "../../components/text.js";
 import type { UIOptions } from "../BridgeOrchestrator.js";
 import { PaymentReceipt } from "./PaymentReceipt.js";
@@ -37,6 +40,8 @@ export interface SuccessScreenProps {
    * Window adapter for opening URLs
    */
   windowAdapter: WindowAdapter;
+
+  client: ThirdwebClient;
 }
 
 type ViewState = "success" | "detail";
@@ -47,17 +52,34 @@ export function SuccessScreen({
   completedStatuses,
   onDone,
   windowAdapter,
+  client,
 }: SuccessScreenProps) {
   const theme = useCustomTheme();
   const [viewState, setViewState] = useState<ViewState>("success");
 
+  useQuery({
+    queryFn: () => {
+      if (preparedQuote.type === "buy" || preparedQuote.type === "sell") {
+        trackPayEvent({
+          chainId: preparedQuote.intent.originChainId,
+          client: client,
+          event: "ub:ui:success_screen",
+          fromToken: preparedQuote.intent.originTokenAddress,
+          toChainId: preparedQuote.intent.destinationChainId,
+          toToken: preparedQuote.intent.destinationTokenAddress,
+        });
+      }
+    },
+    queryKey: ["success_screen", preparedQuote.type],
+  });
+
   if (viewState === "detail") {
     return (
       <PaymentReceipt
-        preparedQuote={preparedQuote}
         completedStatuses={completedStatuses}
-        windowAdapter={windowAdapter}
         onBack={() => setViewState("success")}
+        preparedQuote={preparedQuote}
+        windowAdapter={windowAdapter}
       />
     );
   }
@@ -68,36 +90,36 @@ export function SuccessScreen({
 
       <Spacer y="xl" />
 
-      <Container flex="column" gap="md" center="x">
+      <Container center="x" flex="column" gap="md">
         {/* Success Icon with Animation */}
         <Container
           center="both"
           flex="row"
           style={{
-            width: "64px",
-            height: "64px",
-            borderRadius: "50%",
-            backgroundColor: theme.colors.tertiaryBg,
-            marginBottom: "16px",
-            border: `2px solid ${theme.colors.success}`,
             animation: "successBounce 0.6s ease-out",
+            backgroundColor: theme.colors.tertiaryBg,
+            border: `2px solid ${theme.colors.success}`,
+            borderRadius: "50%",
+            height: "64px",
+            marginBottom: "16px",
+            width: "64px",
           }}
         >
           <CheckIcon
-            width={iconSize.xl}
-            height={iconSize.xl}
             color={theme.colors.success}
+            height={iconSize.xl}
             style={{
               animation: "checkAppear 0.3s ease-out 0.3s both",
             }}
+            width={iconSize.xl}
           />
         </Container>
 
-        <Text size="xl" color="primaryText" center>
+        <Text center color="primaryText" size="xl">
           Payment Successful!
         </Text>
 
-        <Text size="sm" color="secondaryText" center>
+        <Text center color="secondaryText" size="sm">
           Your cross-chain payment has been completed successfully.
         </Text>
       </Container>
@@ -106,14 +128,14 @@ export function SuccessScreen({
       {/* Action Buttons */}
       <Container flex="column" gap="sm" style={{ width: "100%" }}>
         <Button
-          variant="secondary"
           fullWidth
           onClick={() => setViewState("detail")}
+          variant="secondary"
         >
           View Payment Receipt
         </Button>
 
-        <Button variant="accent" fullWidth onClick={onDone}>
+        <Button fullWidth onClick={onDone} variant="accent">
           {uiOptions.mode === "transaction" ? "Continue" : "Done"}
         </Button>
       </Container>

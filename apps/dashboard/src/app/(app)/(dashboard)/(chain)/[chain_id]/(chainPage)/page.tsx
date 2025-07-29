@@ -1,15 +1,13 @@
-import { getClientThirdwebClient } from "@/constants/thirdweb-client.client";
 import { CircleAlertIcon } from "lucide-react";
+import { getClientThirdwebClient } from "@/constants/thirdweb-client.client";
 import { getRawAccount } from "../../../../account/settings/getAccount";
 import { getChain, getChainMetadata } from "../../utils";
-import NextSteps from "./components/client/NextSteps";
-import { BuyFundsSection } from "./components/server/BuyFundsSection";
+import { BuyFundsSection } from "./components/client/BuyFundsSection";
 import { ChainOverviewSection } from "./components/server/ChainOverviewSection";
-import { ClaimChainSection } from "./components/server/ClaimChainSection";
-import { FaucetSection } from "./components/server/FaucetSection";
-import { SupportedProductsSection } from "./components/server/SupportedProductsSection";
 import { ChainCTA } from "./components/server/cta-card";
 import { ExplorersSection } from "./components/server/explorer-section";
+import { FaucetSection } from "./components/server/FaucetSection";
+import { SupportedProductsSection } from "./components/server/SupportedProductsSection";
 
 export default async function Page(props: {
   params: Promise<{ chain_id: string }>;
@@ -44,7 +42,7 @@ export default async function Page(props: {
 
       {/* Faucet / Buy Funds */}
       {chain.testnet ? (
-        <FaucetSection chain={chain} isLoggedIn={!!account} client={client} />
+        <FaucetSection chain={chain} client={client} isLoggedIn={!!account} />
       ) : chain.services.find((c) => c.service === "pay" && c.enabled) ? (
         <BuyFundsSection chain={chain} client={client} />
       ) : null}
@@ -60,11 +58,6 @@ export default async function Page(props: {
       {chain.services.filter((s) => s.enabled).length > 0 && (
         <SupportedProductsSection services={chain.services} />
       )}
-      {/*Next Steps */}
-      <NextSteps chain={chain} />
-
-      {/* Claim Chain */}
-      {!chainMetadata && <ClaimChainSection />}
     </div>
   );
 }

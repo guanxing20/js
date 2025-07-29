@@ -9,7 +9,7 @@
     --popover: 0 0% 100%;
     --card: 0 0% 100%;
     --secondary: 0 0% 90%;
-    --muted: 0 0% 93%;
+    --muted: 0 0% 97%;
     --accent: 0 0% 93%;
     --inverted: 0 0% 4%;
 
@@ -58,7 +58,7 @@
     --card: 0 0% 3.92%;
     --popover: 0 0% 0%;
     --secondary: 0 0% 11%;
-    --muted: 0 0% 11%;
+    --muted: 0 0% 8%;
     --accent: 0 0% 11%;
     --inverted: 0 0% 100%;
 
@@ -108,6 +108,29 @@
   }
 }
 
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+code span {
+  color: var(--code-light-color);
+}
+
+.dark code span {
+  color: var(--code-dark-color);
+}
+
+.shiki,
+.shiki span {
+  background-color: transparent !important;
+}
+
 .dark .shiki,
 .dark .shiki span {
   color: var(--shiki-dark) !important;
@@ -115,11 +138,6 @@
   font-style: var(--shiki-dark-font-style) !important;
   font-weight: var(--shiki-dark-font-weight) !important;
   text-decoration: var(--shiki-dark-text-decoration) !important;
-}
-
-.shiki,
-.shiki span {
-  background-color: transparent !important;
 }
 
 /* Fix colors on auto-filled inputs  */
@@ -191,12 +209,4 @@ button {
 
 html:not(.dark) .dark-only {
   display: none;
-}
-
-code span {
-  color: var(--code-light-color);
-}
-
-.dark code span {
-  color: var(--code-dark-color);
 }

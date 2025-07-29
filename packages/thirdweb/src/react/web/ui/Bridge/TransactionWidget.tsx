@@ -1,11 +1,14 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { trackPayEvent } from "../../../../analytics/track/pay.js";
 import type { Token } from "../../../../bridge/index.js";
 import type { Chain } from "../../../../chains/types.js";
 import type { ThirdwebClient } from "../../../../client/client.js";
 import { NATIVE_TOKEN_ADDRESS } from "../../../../constants/addresses.js";
 import { getToken } from "../../../../pay/convert/get-token.js";
+import type { SupportedFiatCurrency } from "../../../../pay/convert/type.js";
+import type { PurchaseData } from "../../../../pay/types.js";
 import {
   type PreparedTransaction,
   prepareTransaction,
@@ -18,14 +21,17 @@ import type { SmartWalletOptions } from "../../../../wallets/smart/types.js";
 import type { AppMetadata } from "../../../../wallets/types.js";
 import type { WalletId } from "../../../../wallets/wallet-types.js";
 import { CustomThemeProvider } from "../../../core/design-system/CustomThemeProvider.js";
-import type { Theme } from "../../../core/design-system/index.js";
+import { iconSize, type Theme } from "../../../core/design-system/index.js";
 import type { SiweAuthOptions } from "../../../core/hooks/auth/useSiweAuth.js";
 import type { ConnectButton_connectModalOptions } from "../../../core/hooks/connection/ConnectButtonProps.js";
 import type { SupportedTokens } from "../../../core/utils/defaultTokens.js";
-import { EmbedContainer } from "../ConnectWallet/Modal/ConnectEmbed.js";
+import { AccentFailIcon } from "../ConnectWallet/icons/AccentFailIcon.js";
 import { useConnectLocale } from "../ConnectWallet/locale/getConnectLocale.js";
+import { EmbedContainer } from "../ConnectWallet/Modal/ConnectEmbed.js";
 import { DynamicHeight } from "../components/DynamicHeight.js";
+import { Spacer } from "../components/Spacer.js";
 import { Spinner } from "../components/Spinner.js";
+import { Text } from "../components/text.js";
 import type { LocaleId } from "../types.js";
 import { BridgeOrchestrator, type UIOptions } from "./BridgeOrchestrator.js";
 import { UnsupportedTokenScreen } from "./UnsupportedTokenScreen.js";
@@ -102,6 +108,12 @@ export type TransactionWidgetProps = {
   className?: string;
 
   /**
+   * Whether to show thirdweb branding in the widget.
+   * @default true
+   */
+  showThirdwebBranding?: boolean;
+
+  /**
    * The token address needed to complete this transaction. Leave undefined if no token is required.
    */
   tokenAddress?: Address;
@@ -139,7 +151,7 @@ export type TransactionWidgetProps = {
   /**
    * Arbitrary data to be included in the returned status and webhook events.
    */
-  purchaseData?: Record<string, unknown>;
+  purchaseData?: PurchaseData;
 
   /**
    * Callback triggered when the purchase is successful.
@@ -165,6 +177,18 @@ export type TransactionWidgetProps = {
    * @hidden
    */
   paymentLinkId?: string;
+
+  /**
+   * Allowed payment methods
+   * @default ["crypto", "card"]
+   */
+  paymentMethods?: ("crypto" | "card")[];
+
+  /**
+   * The currency to use for the payment.
+   * @default "USD"
+   */
+  currency?: SupportedFiatCurrency;
 };
 
 // Enhanced UIOptions to handle unsupported token state
@@ -267,16 +291,26 @@ type UIOptionsResult =
  *
  * Refer to the [`TransactionWidgetConnectOptions`](https://portal.thirdweb.com/references/typescript/v5/TransactionWidgetConnectOptions) type for more details.
  *
- * @bridge
- * @beta
- * @react
+ * @bridge Widgets
  */
 export function TransactionWidget(props: TransactionWidgetProps) {
   const localeQuery = useConnectLocale(props.locale || "en_US");
   const theme = props.theme || "dark";
 
+  useQuery({
+    queryFn: () => {
+      trackPayEvent({
+        chainId: props.transaction.chain.id,
+        client: props.client,
+        event: "ub:ui:transaction_widget:render",
+        toToken: props.tokenAddress,
+      });
+      return true;
+    },
+    queryKey: ["transaction_widget:render"],
+  });
+
   const bridgeDataQuery = useQuery({
-    queryKey: ["bridgeData", stringify(props)],
     queryFn: async (): Promise<UIOptionsResult> => {
       let erc20Value = props.transaction.erc20Value;
 
@@ -287,7 +321,19 @@ export function TransactionWidget(props: TransactionWidgetProps) {
           props.client,
           checksumAddress(tokenAddress),
           props.transaction.chain.id,
-        );
+        ).catch((e) => {
+          if (e instanceof Error && e.message.includes("not supported")) {
+            return null;
+          }
+          throw e;
+        });
+        if (!token) {
+          return {
+            chain: props.transaction.chain,
+            tokenAddress: checksumAddress(tokenAddress),
+            type: "unsupported_token",
+          };
+        }
 
         erc20Value = {
           amountWei: toUnits(props.amount, token.decimals),
@@ -301,18 +347,21 @@ export function TransactionWidget(props: TransactionWidgetProps) {
       });
 
       return {
-        type: "success",
         data: {
-          mode: "transaction",
+          currency: props.currency || "USD",
           metadata: {
-            title: props.title,
             description: props.description,
             image: props.image,
+            title: props.title,
           },
+          mode: "transaction",
           transaction,
         },
+        type: "success",
       };
     },
+    queryKey: ["bridgeData", stringify(props)],
+    retry: 1,
   });
 
   let content = null;
@@ -320,39 +369,65 @@ export function TransactionWidget(props: TransactionWidgetProps) {
     content = (
       <div
         style={{
-          minHeight: "350px",
+          alignItems: "center",
           display: "flex",
           justifyContent: "center",
-          alignItems: "center",
+          minHeight: "350px",
         }}
       >
-        <Spinner size="xl" color="secondaryText" />
+        <Spinner color="secondaryText" size="xl" />
+      </div>
+    );
+  } else if (bridgeDataQuery.error) {
+    content = (
+      <div
+        style={{
+          alignItems: "center",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+          minHeight: "350px",
+        }}
+      >
+        <AccentFailIcon size={iconSize["3xl"]} />
+        <Spacer y="lg" />
+        <Text color="secondaryText" size="md">
+          {bridgeDataQuery.error.message}
+        </Text>
       </div>
     );
   } else if (bridgeDataQuery.data?.type === "unsupported_token") {
     // Show unsupported token screen
-    content = <UnsupportedTokenScreen chain={bridgeDataQuery.data.chain} />;
+    content = (
+      <UnsupportedTokenScreen
+        chain={bridgeDataQuery.data.chain}
+        client={props.client}
+        tokenAddress={props.tokenAddress}
+      />
+    );
   } else if (bridgeDataQuery.data?.type === "success") {
     // Show normal bridge orchestrator
     content = (
       <BridgeOrchestrator
         client={props.client}
-        uiOptions={bridgeDataQuery.data.data}
-        connectOptions={props.connectOptions}
         connectLocale={localeQuery.data}
-        purchaseData={props.purchaseData}
-        paymentLinkId={props.paymentLinkId}
+        connectOptions={props.connectOptions}
+        onCancel={() => {
+          props.onCancel?.();
+        }}
         onComplete={() => {
           props.onSuccess?.();
         }}
         onError={(err: Error) => {
           props.onError?.(err);
         }}
-        onCancel={() => {
-          props.onCancel?.();
-        }}
+        paymentLinkId={props.paymentLinkId}
+        paymentMethods={props.paymentMethods}
         presetOptions={props.presetOptions}
+        purchaseData={props.purchaseData}
         receiverAddress={undefined}
+        uiOptions={bridgeDataQuery.data.data}
+        showThirdwebBranding={props.showThirdwebBranding}
       />
     );
   }
@@ -360,9 +435,9 @@ export function TransactionWidget(props: TransactionWidgetProps) {
   return (
     <CustomThemeProvider theme={theme}>
       <EmbedContainer
+        className={props.className}
         modalSize="compact"
         style={props.style}
-        className={props.className}
       >
         <DynamicHeight>{content}</DynamicHeight>
       </EmbedContainer>

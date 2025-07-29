@@ -1,5 +1,17 @@
 # @thirdweb-dev/insight
 
+## 1.1.1
+
+### Patch Changes
+
+- [#7710](https://github.com/thirdweb-dev/js/pull/7710) [`e92d8f9`](https://github.com/thirdweb-dev/js/commit/e92d8f921a4b620e731e8916e4c145711c87f5fa) Thanks [@joaquim-verges](https://github.com/joaquim-verges)! - Update to latest API
+
+## 1.1.0
+
+### Minor Changes
+
+- [#7431](https://github.com/thirdweb-dev/js/pull/7431) [`1387337`](https://github.com/thirdweb-dev/js/commit/1387337955a38f1527266b0a6146bb18d86426aa) Thanks [@PaoloRollo](https://github.com/PaoloRollo)! - update hey-api version to 0.76.0
+
 ## 1.0.2
 
 ### Patch Changes

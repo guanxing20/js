@@ -1,11 +1,11 @@
 import type { Meta, StoryObj } from "@storybook/nextjs";
-import { BadgeContainer } from "stories/utils";
+import { BadgeContainer } from "@/storybook/utils";
 import { CodeClient } from "./code.client";
 
 const meta = {
-  title: "code/lang",
   component: Component,
   parameters: {},
+  title: "code/lang",
 } satisfies Meta<typeof Component>;
 
 export default meta;

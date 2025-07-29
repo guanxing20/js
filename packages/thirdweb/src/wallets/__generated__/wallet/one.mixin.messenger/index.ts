@@ -12,7 +12,7 @@ export const wallet = {
     android:
       "https://play.google.com/store/apps/details?id=one.mixin.messenger",
     mac: null,
-    windows: null,
+    windows: "https://apps.microsoft.com/detail/9nq6hf99b8nj?hl=en-US&gl=US",
     linux: null,
     chrome: null,
     firefox: null,

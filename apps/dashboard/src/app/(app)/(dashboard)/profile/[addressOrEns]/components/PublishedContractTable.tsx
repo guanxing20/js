@@ -1,3 +1,10 @@
+/** biome-ignore-all lint/nursery/noNestedComponentDefinitions: FIXME */
+
+import { ShieldCheckIcon } from "lucide-react";
+import Link from "next/link";
+import { useMemo } from "react";
+import { type Column, type Row, useTable } from "react-table";
+import type { ThirdwebClient } from "thirdweb";
 import { Img } from "@/components/blocks/Img";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,14 +17,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ToolTipLabel } from "@/components/ui/tooltip";
-import type { PublishedContractDetails } from "components/contract-components/hooks";
-import { replaceDeployerAddress } from "lib/publisher-utils";
-import { replaceIpfsUrl } from "lib/sdk";
-import { ShieldCheckIcon } from "lucide-react";
-import Link from "next/link";
-import { useMemo } from "react";
-import { type Column, type Row, useTable } from "react-table";
-import type { ThirdwebClient } from "thirdweb";
+import type { PublishedContractDetails } from "@/hooks/contract-hooks";
+import { replaceDeployerAddress } from "@/lib/publisher-utils";
+import { publicIPFSGateway } from "@/lib/sdk";
+import { resolveSchemeWithErrorHandler } from "@/utils/resolveSchemeWithErrorHandler";
 
 interface PublishedContractTableProps {
   contractDetails: ContractDataInput[];
@@ -51,39 +54,45 @@ export function PublishedContractTable(props: PublishedContractTableProps) {
   const tableColumns: Column<ContractDataRow>[] = useMemo(() => {
     const cols: Column<ContractDataRow>[] = [
       {
-        Header: "Logo",
         accessor: (row) => row.logo,
-        // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+        // biome-ignore lint/suspicious/noExplicitAny: FIXME
         Cell: (cell: any) => (
           <Img
             alt=""
-            src={cell.value ? replaceIpfsUrl(cell.value, props.client) : ""}
+            className="size-8"
             fallback={
               <div className="size-8 rounded-full border border-border bg-muted" />
             }
-            className="size-8"
+            src={
+              cell.value
+                ? resolveSchemeWithErrorHandler({
+                    client: props.client,
+                    uri: cell.value,
+                  })
+                : ""
+            }
           />
         ),
+        Header: "Logo",
       },
       {
-        Header: "Name",
         accessor: (row) => row.name,
         // biome-ignore lint/suspicious/noExplicitAny: FIXME
         Cell: (cell: any) => {
           return (
             <Link
+              className="whitespace-nowrap text-foreground before:absolute before:inset-0"
               href={replaceDeployerAddress(
                 `/${publisherEnsName || cell.row.original.publisher}/${cell.row.original.id}`,
               )}
-              className="whitespace-nowrap text-foreground before:absolute before:inset-0"
             >
               {cell.value}
             </Link>
           );
         },
+        Header: "Name",
       },
       {
-        Header: "Description",
         accessor: (row) => row.description,
         // biome-ignore lint/suspicious/noExplicitAny: FIXME
         Cell: (cell: any) => (
@@ -91,17 +100,17 @@ export function PublishedContractTable(props: PublishedContractTableProps) {
             {cell.value}
           </span>
         ),
+        Header: "Description",
       },
       {
-        Header: "Version",
         accessor: (row) => row.version,
         // biome-ignore lint/suspicious/noExplicitAny: FIXME
         Cell: (cell: any) => (
           <span className="text-muted-foreground">{cell.value}</span>
         ),
+        Header: "Version",
       },
       {
-        id: "audit-badge",
         accessor: (row) => ({ audit: row.audit }),
         // biome-ignore lint/suspicious/noExplicitAny: FIXME
         Cell: (cell: any) => (
@@ -110,17 +119,17 @@ export function PublishedContractTable(props: PublishedContractTableProps) {
               <ToolTipLabel label="View Contract Audit">
                 <Button
                   asChild
-                  variant="ghost"
                   className="relative z-10 h-auto w-auto p-2"
+                  variant="ghost"
                 >
                   <Link
-                    href={replaceIpfsUrl(cell.value.audit, props.client)}
                     aria-label="View Contract Audit"
-                    rel="noopener noreferrer"
-                    target="_blank"
+                    href={publicIPFSGateway(cell.value.audit)}
                     onClick={(e) => {
                       e.stopPropagation();
                     }}
+                    rel="noopener noreferrer"
+                    target="_blank"
                   >
                     <ShieldCheckIcon className="size-5 text-success-text" />
                   </Link>
@@ -129,6 +138,7 @@ export function PublishedContractTable(props: PublishedContractTableProps) {
             ) : null}
           </span>
         ),
+        id: "audit-badge",
       },
     ];
 
@@ -167,7 +177,7 @@ export function PublishedContractTable(props: PublishedContractTableProps) {
         <TableBody {...tableInstance.getTableBodyProps()} className="relative">
           {tableInstance.rows.map((row) => {
             tableInstance.prepareRow(row);
-            return <ContractTableRow row={row} key={row.getRowProps().key} />;
+            return <ContractTableRow key={row.getRowProps().key} row={row} />;
           })}
         </TableBody>
       </Table>
@@ -176,25 +186,21 @@ export function PublishedContractTable(props: PublishedContractTableProps) {
   );
 }
 
-function ContractTableRow(props: {
-  row: Row<ContractDataRow>;
-}) {
+function ContractTableRow(props: { row: Row<ContractDataRow> }) {
   const { row } = props;
   const { key, ...rowProps } = row.getRowProps();
   return (
-    <>
-      <TableRow
-        linkBox
-        className="cursor-pointer hover:bg-card"
-        {...rowProps}
-        key={key}
-      >
-        {row.cells.map((cell) => (
-          <TableCell {...cell.getCellProps()} key={cell.getCellProps().key}>
-            {cell.render("Cell")}
-          </TableCell>
-        ))}
-      </TableRow>
-    </>
+    <TableRow
+      className="cursor-pointer hover:bg-card"
+      linkBox
+      {...rowProps}
+      key={key}
+    >
+      {row.cells.map((cell) => (
+        <TableCell {...cell.getCellProps()} key={cell.getCellProps().key}>
+          {cell.render("Cell")}
+        </TableCell>
+      ))}
+    </TableRow>
   );
 }
